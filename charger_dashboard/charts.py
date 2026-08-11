@@ -173,6 +173,7 @@ def choropleth(
     )
     values["sido"] = values["sido"].astype(str)
     values["value"] = values["value"].astype(float)
+    values = _with_burden_visuals(values)
 
     geo = copy.deepcopy(geojson)
     matched = 0
@@ -212,12 +213,14 @@ def choropleth(
         hover_name="sido",
         hover_data={
             "value": ":,.2f",
-            "rank": True,
+            "burden_band": True,
             "sido": False,
+            "rank": False,
+            "burden_score": False,
         },
         labels={
             "value": f"{meta['label']} ({meta['unit']})",
-            "rank": "부담 방향 순위",
+            "burden_band": "상대 부담",
         },
         title=f"{year}년 {meta['label']}",
     )
@@ -241,30 +244,67 @@ def choropleth(
     return fig
 
 
-def ranked_bar(df: pd.DataFrame, metric: str) -> alt.Chart:
+def _burden_band(rank: float | int, n: int) -> str:
+    if n <= 0 or pd.isna(rank):
+        return "자료 없음"
+    share = float(rank) / n
+    if share <= 0.25:
+        return "높음"
+    if share <= 0.50:
+        return "다소 높음"
+    if share <= 0.75:
+        return "보통"
+    return "낮음"
+
+
+def _with_burden_visuals(df: pd.DataFrame) -> pd.DataFrame:
+    """Attach qualitative burden band + size score (bigger = more relative burden)."""
+    out = df.copy()
+    n = len(out)
+    out["burden_score"] = (n + 1) - out["rank"].astype(float)
+    out["burden_band"] = out["rank"].map(lambda rank: _burden_band(rank, n))
+    return out
+
+
+def burden_bubbles(df: pd.DataFrame, metric: str) -> alt.Chart:
+    """Circle size = relative burden; color = burden band. Avoids redundant rank numbers."""
     meta = METRIC_META[metric]
-    plot = df.copy()
-    sido_col = _sido_column(plot)
-    plot = plot.rename(columns={sido_col: "sido", metric: "value"})
+    sido_col = _sido_column(df)
+    plot = df.rename(columns={sido_col: "sido", metric: "value"})
+    plot = _with_burden_visuals(plot)
+    band_order = ["높음", "다소 높음", "보통", "낮음"]
     return (
         alt.Chart(plot)
-        .mark_bar()
+        .mark_circle(opacity=0.9, stroke="#0f172a", strokeWidth=0.4)
         .encode(
-            x=alt.X("value:Q", title=f"{meta['label']} ({meta['unit']})"),
             y=alt.Y(
                 "sido:N",
                 title="시·도",
-                sort=alt.EncodingSortField(field="value", order="descending"),
+                sort=alt.EncodingSortField(field="burden_score", order="descending"),
+            ),
+            x=alt.X(
+                "value:Q",
+                title=f"{meta['label']} ({meta['unit']})",
+            ),
+            size=alt.Size(
+                "burden_score:Q",
+                title="상대 부담",
+                scale=alt.Scale(range=[80, 1200]),
+                legend=None,
             ),
             color=alt.Color(
-                "value:Q",
-                title=meta["label"],
-                scale=alt.Scale(scheme="tealblues"),
+                "burden_band:N",
+                title="상대 부담",
+                scale=alt.Scale(
+                    domain=band_order,
+                    range=["#0f766e", "#14b8a6", "#99f6e4", "#cbd5e1"],
+                ),
+                sort=band_order,
             ),
             tooltip=[
                 alt.Tooltip("sido:N", title="시·도"),
                 alt.Tooltip("value:Q", title=meta["label"], format=meta["format"]),
-                alt.Tooltip("rank:Q", title="순위"),
+                alt.Tooltip("burden_band:N", title="상대 부담"),
             ],
         )
         .properties(height=560)
