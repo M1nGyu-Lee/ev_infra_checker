@@ -87,8 +87,8 @@ if not selected_regions:
     st.stop()
 
 panel_filtered = panel_all[
-    panel["시도"].isin(selected_regions)
-    & panel["연도"].between(min_year, min(max_year, 2025))
+    panel_all["시도"].isin(selected_regions)
+    & panel_all["연도"].between(min_year, min(max_year, 2025))
 ]
 
 tabs = st.tabs(["공공급속 이용 추이", "2024–2025 YTD 비교"])
