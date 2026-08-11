@@ -69,11 +69,15 @@ if map_data.empty:
 
 map_col, rank_col = st.columns([1.25, 1])
 with map_col, st.container(border=True):
-    st.altair_chart(choropleth(geojson, map_data, metric, year))
+    st.plotly_chart(
+        choropleth(geojson, map_data, metric, year),
+        use_container_width=True,
+        config={"displayModeBar": False},
+    )
     st.caption("지도 위에 마우스를 올리면 시·도별 값과 부담 방향 순위를 볼 수 있습니다.")
 
 with rank_col, st.container(border=True):
-    st.altair_chart(ranked_bar(map_data, metric))
+    st.altair_chart(ranked_bar(map_data, metric), use_container_width=True)
 
 st.caption(meta["help"])
 

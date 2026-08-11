@@ -1,11 +1,27 @@
-"""Altair chart builders shared by dashboard pages."""
+"""Chart builders shared by dashboard pages."""
 
 from __future__ import annotations
 
+import copy
+
 import altair as alt
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 from charger_dashboard.data import METRIC_META
+
+
+def _sido_column(df: pd.DataFrame) -> str:
+    for name in ("시도", "시도", "sido"):
+        if name in df.columns:
+            return name
+    raise KeyError("시·도 컬럼(sido_short/시도)이 없습니다.")
+
+
+def _geo_sido(props: dict) -> str | None:
+    value = props.get("시도") or props.get("시도") or props.get("sido")
+    return None if value is None else str(value)
 
 COLORS = {
     "ev": "#2563EB",
@@ -54,8 +70,9 @@ def paired_ytd_chart(df: pd.DataFrame, metric_prefix: str) -> alt.Chart:
         "active_charger": ("활성기_2024_YTD", "활성기_2025_YTD"),
     }
     value_columns = list(column_pairs[metric_prefix])
-    chart_df = df[["시도", *value_columns]].melt(
-        id_vars="시도",
+    sido_col = _sido_column(df)
+    chart_df = df[[sido_col, *value_columns]].rename(columns={sido_col: "sido"}).melt(
+        id_vars="sido",
         var_name="period",
         value_name="value",
     )
@@ -69,7 +86,7 @@ def paired_ytd_chart(df: pd.DataFrame, metric_prefix: str) -> alt.Chart:
         alt.Chart(chart_df)
         .mark_bar()
         .encode(
-            x=alt.X("시도:N", title="시·도", sort="-y"),
+            x=alt.X("sido:N", title="시·도", sort="-y"),
             y=alt.Y("value:Q", title="동기간 값"),
             color=alt.Color(
                 "period:N",
@@ -78,7 +95,7 @@ def paired_ytd_chart(df: pd.DataFrame, metric_prefix: str) -> alt.Chart:
             ),
             xOffset="period:N",
             tooltip=[
-                alt.Tooltip("시도:N", title="시·도"),
+                alt.Tooltip("sido:N", title="시·도"),
                 alt.Tooltip("period:N", title="기간"),
                 alt.Tooltip("value:Q", title="값", format=",.2f"),
             ],
@@ -88,8 +105,12 @@ def paired_ytd_chart(df: pd.DataFrame, metric_prefix: str) -> alt.Chart:
 
 
 def burden_scatter(df: pd.DataFrame) -> alt.Chart:
+    sido_col = _sido_column(df)
+    plot = df.dropna(subset=["EV천대당활성급속", "활성기당충전량"]).rename(
+        columns={sido_col: "sido"}
+    )
     return (
-        alt.Chart(df.dropna(subset=["EV천대당활성급속", "활성기당충전량"]))
+        alt.Chart(plot)
         .mark_circle(opacity=0.82)
         .encode(
             x=alt.X(
@@ -111,7 +132,7 @@ def burden_scatter(df: pd.DataFrame) -> alt.Chart:
                 scale=alt.Scale(scheme="tealblues"),
             ),
             tooltip=[
-                alt.Tooltip("시도:N", title="시·도"),
+                alt.Tooltip("sido:N", title="시·도"),
                 alt.Tooltip("전기차등록대수:Q", title="EV", format=","),
                 alt.Tooltip(
                     "EV천대당활성급속:Q",
@@ -135,80 +156,96 @@ def choropleth(
     metric_df: pd.DataFrame,
     metric: str,
     year: int,
-) -> alt.Chart:
-    """Sido choropleth: pre-join in pandas, ASCII-only Altair fields (Cloud-safe)."""
+) -> go.Figure:
+    """Sido choropleth via Plotly.
+
+    Streamlit's ``st.altair_chart`` strips inline GeoJSON geometry, which yields a
+    blank map with a NaN legend. Plotly ``px.choropleth`` keeps local WGS84
+    polygons (lon ~124–132, lat ~33–39) and is the reliable Cloud path.
+    """
     meta = METRIC_META[metric]
-    values = metric_df.copy()
-    if "시도" in values.columns:
-        values = values.rename(columns={"시도": "sido"})
-    elif "시도" in values.columns:
-        values = values.rename(columns={"시도": "sido"})
-    values = values[["sido", metric, "rank"]].rename(columns={metric: "value"})
-    lookup = values.set_index("sido")
+    sido_col = _sido_column(metric_df)
+    values = (
+        metric_df[[sido_col, metric, "rank"]]
+        .rename(columns={sido_col: "sido", metric: "value"})
+        .dropna(subset=["value"])
+        .copy()
+    )
+    values["sido"] = values["sido"].astype(str)
+    values["value"] = values["value"].astype(float)
 
-    features: list[dict] = []
-    for feat in geojson.get("features", []):
-        props = feat.get("properties") or {}
-        sido = props.get("시도") or props.get("시도") or props.get("sido")
-        if sido is None or sido not in lookup.index:
+    geo = copy.deepcopy(geojson)
+    matched = 0
+    for feat in geo.get("features", []):
+        props = feat.setdefault("properties", {})
+        sido = _geo_sido(props)
+        if sido is None:
             continue
-        row = lookup.loc[sido]
-        value = row["value"]
-        rank = row["rank"]
-        if pd.isna(value):
-            continue
-        features.append(
-            {
-                "type": "Feature",
-                "geometry": feat["geometry"],
-                "sido": str(sido),
-                "value": float(value),
-                "rank": int(rank) if pd.notna(rank) else None,
-            }
-        )
+        props["sido"] = sido
+        if sido in set(values["sido"]):
+            matched += 1
 
-    if not features:
-        # empty chart placeholder
-        return (
-            alt.Chart(pd.DataFrame({"x": [0], "y": [0]}))
-            .mark_text(text="지도 데이터 조인 실패", dy=20)
-            .encode(x=alt.value(200), y=alt.value(200))
-            .properties(height=560, title=f"{year}년 {meta['label']}")
+    if values.empty or matched == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="지도 데이터 조인 실패 (시·도 키 또는 좌표 확인)",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
         )
-
-    return (
-        alt.Chart(alt.Data(values=features))
-        .mark_geoshape(stroke="#FFFFFF", strokeWidth=1.0)
-        .encode(
-            color=alt.Color(
-                "value:Q",
-                title=f"{meta['label']} ({meta['unit']})",
-                scale=alt.Scale(scheme="tealblues"),
-                legend=alt.Legend(format=meta["format"].replace(",", "")),
-            ),
-            tooltip=[
-                alt.Tooltip("sido:N", title="시·도"),
-                alt.Tooltip("value:Q", title=meta["label"], format=meta["format"]),
-                alt.Tooltip("rank:Q", title="부담 방향 순위"),
-            ],
-        )
-        .project(type="mercator", scale=5500, center=[127.7, 35.9])
-        .properties(
-            width=520,
+        fig.update_layout(
             height=560,
             title=f"{year}년 {meta['label']}",
+            margin=dict(l=0, r=0, t=48, b=0),
         )
+        return fig
+
+    fig = px.choropleth(
+        values,
+        geojson=geo,
+        locations="sido",
+        featureidkey="properties.sido",
+        color="value",
+        color_continuous_scale="Teal",
+        hover_name="sido",
+        hover_data={
+            "value": ":,.2f",
+            "rank": True,
+            "sido": False,
+        },
+        labels={
+            "value": f"{meta['label']} ({meta['unit']})",
+            "rank": "부담 방향 순위",
+        },
+        title=f"{year}년 {meta['label']}",
     )
+    fig.update_traces(marker_line_width=0.6, marker_line_color="#ffffff")
+    fig.update_geos(
+        fitbounds="locations",
+        visible=False,
+        projection_type="mercator",
+        bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_layout(
+        height=560,
+        margin=dict(l=0, r=0, t=48, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        coloraxis_colorbar=dict(
+            title=f"{meta['label']}<br>({meta['unit']})",
+            thickness=14,
+            len=0.72,
+        ),
+    )
+    return fig
 
 
 def ranked_bar(df: pd.DataFrame, metric: str) -> alt.Chart:
     meta = METRIC_META[metric]
     plot = df.copy()
-    if "시도" in plot.columns:
-        plot = plot.rename(columns={"시도": "sido"})
-    elif "시도" in plot.columns:
-        plot = plot.rename(columns={"시도": "sido"})
-    plot = plot.rename(columns={metric: "value"})
+    sido_col = _sido_column(plot)
+    plot = plot.rename(columns={sido_col: "sido", metric: "value"})
     return (
         alt.Chart(plot)
         .mark_bar()
