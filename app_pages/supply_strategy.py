@@ -353,8 +353,8 @@ with tabs[1]:
                 color=alt.Color("급속비중:Q", title="급속 비중 %"),
                 tooltip=[
                     "권역:N",
-                    "완속:Q",
-                    "급속:Q",
+                    "slow:Q",
+                    "fast:Q",
                     "완속급속비:Q",
                     "급속비중:Q",
                 ],

@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from charger_dashboard.charts import (
+    _sido_column,
     _with_burden_visuals,
     burden_bubbles,
     choropleth,
@@ -95,7 +96,7 @@ region = st.selectbox(
     index=SIDO_ORDER.index(selected_region) if selected_region in SIDO_ORDER else 0,
     key="map_detail_region",
 )
-sido_col = "시도" if "시도" in visual.columns else "시도"
+sido_col = _sido_column(visual)
 row = visual[visual[sido_col] == region]
 if not row.empty:
     row = row.iloc[0]

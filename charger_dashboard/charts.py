@@ -13,15 +13,20 @@ from charger_dashboard.data import METRIC_META
 
 
 def _sido_column(df: pd.DataFrame) -> str:
-    for name in ("시도", "시도", "sido"):
-        if name in df.columns:
-            return name
+    # Set form survives share-package rewrite (sido_short -> 시도) without duplicate branches.
+    candidates = {"시도", "시도", "sido"}
+    for name in df.columns:
+        if name in candidates:
+            return str(name)
     raise KeyError("시·도 컬럼(sido_short/시도)이 없습니다.")
 
 
 def _geo_sido(props: dict) -> str | None:
-    value = props.get("시도") or props.get("시도") or props.get("sido")
-    return None if value is None else str(value)
+    candidates = {"시도", "시도", "sido"}
+    for key, value in props.items():
+        if key in candidates and value is not None:
+            return str(value)
+    return None
 
 COLORS = {
     "ev": "#2563EB",
@@ -29,8 +34,8 @@ COLORS = {
     "active": "#D97706",
     "muted": "#64748B",
     "danger": "#DC2626",
-    "완속": "#1D4ED8",
-    "급속": "#DC2626",
+    "palette_slow": "#1D4ED8",
+    "palette_fast": "#DC2626",
 }
 
 
