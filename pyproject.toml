@@ -1,0 +1,13 @@
+[project]
+name = "ev-infra-checker"
+version = "0.1.0"
+description = "Streamlit dashboard for EV and public fast-charger infrastructure"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.0",
+  "streamlit>=1.60",
+  "altair>=6.0",
+]
+
+[tool.uv]
+package = false

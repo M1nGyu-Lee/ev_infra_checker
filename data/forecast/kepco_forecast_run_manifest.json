@@ -1,0 +1,81 @@
+{
+  "forecast_version": "1.0.0",
+  "generated_at": "2026-08-11T07:19:17.785840+00:00",
+  "target_metric": "kepco_fast_charge_kwh_sum",
+  "target_scope": "kepco_network_fast_17_sido",
+  "analysis_period": [
+    "2019-01",
+    "2025-12"
+  ],
+  "calibration_period": [
+    "2020-01",
+    "2020-06"
+  ],
+  "input_sources": [
+    {
+      "source_id": "moe_public_fast_monthly",
+      "path": "data/analysis/charge_sido_monthly.csv",
+      "role": "sido_demand_trend_and_scaling"
+    },
+    {
+      "source_id": "kepco_charge_partial",
+      "path": "data/processed/kepco_charge_fast_monthly_observed.csv",
+      "role": "calibration_anchor_2020_h1"
+    },
+    {
+      "source_id": "kepco_hourly_load",
+      "path": "data/processed/kepco_hourly_load_monthly.csv",
+      "role": "national_fast_load_index"
+    },
+    {
+      "source_id": "kepco_station_status",
+      "path": "data/processed/kepco_station_sido_annual.csv",
+      "role": "sido_distribution_share"
+    }
+  ],
+  "trend_analysis": {
+    "moe_kepco_ratio_calibration": "2020-01~2020-06 median ratio with pooling",
+    "load_index_formula": "load_kw_sum(t) / load_kw_sum(2020-same-month)",
+    "station_share_formula": "station_count(sido,year) / national_station_count(year)"
+  },
+  "models": [
+    {
+      "model_id": "component_moe_scaled",
+      "formula": "MOE_charge * ratio(sido)",
+      "weight_in_blend": 1.0
+    },
+    {
+      "model_id": "component_load_station_share",
+      "formula": "national_anchor(month) * load_index(t) * share(sido,year)",
+      "weight_in_blend": 0.0
+    }
+  ],
+  "model_blend_weights": {
+    "moe_scaled": 1.0,
+    "load_station_share": 0.0
+  },
+  "chosen_model_id": "kepco_hybrid_moe_load_v1",
+  "weight_selection": "LOO_month_2020_h1_minimize_national_WAPE_grid_0_to_1",
+  "ratio_by_sido": {
+    "서울": 2.2049,
+    "부산": 2.0446,
+    "대구": 2.2181,
+    "인천": 1.2018,
+    "광주": 2.305,
+    "대전": 1.7782,
+    "울산": 0.5719,
+    "세종": 2.8987,
+    "경기": 1.1309,
+    "강원": 1.1109,
+    "충북": 0.688,
+    "충남": 0.4585,
+    "전북": 0.6028,
+    "전남": 1.6269,
+    "경북": 0.5455,
+    "경남": 1.2273,
+    "제주": 2.5602
+  },
+  "backtest_wape_pct": 27.44,
+  "backtest_bias_pct": -20.85,
+  "backtest_n_points": 102
+}

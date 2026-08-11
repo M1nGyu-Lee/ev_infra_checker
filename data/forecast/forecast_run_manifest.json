@@ -1,0 +1,90 @@
+{
+  "forecast_version": "1.0.0",
+  "generated_at": "2026-08-11T07:02:18.028878+00:00",
+  "target_metric": "charge_kwh_sum",
+  "target_scope": "moe_public_fast_17_sido",
+  "forecast_period": [
+    "2025-09",
+    "2025-10",
+    "2025-11",
+    "2025-12"
+  ],
+  "train_start": "2019-01",
+  "train_end": "2025-08",
+  "input_sources": [
+    {
+      "source_id": "moe_public_fast_monthly",
+      "path": "data/analysis/charge_sido_monthly.csv",
+      "role": "sole_training_input"
+    }
+  ],
+  "excluded_sources": [
+    {
+      "source_id": "kepco_charge_volume",
+      "reason": "population_mismatch_and_truncation"
+    },
+    {
+      "source_id": "kepco_hourly_load",
+      "reason": "national_kw_not_kwh"
+    },
+    {
+      "source_id": "kepco_chaon_session",
+      "reason": "single_station"
+    }
+  ],
+  "trend_analysis": {
+    "ytd_comparison": "2025-01~08 vs 2024-01~08",
+    "ytd_growth_method": "median_monthly_yoy",
+    "growth_clip": [
+      0.85,
+      1.25
+    ],
+    "national_growth_factor": 1.0426,
+    "seasonality_reference": "2024-09~12 same_month_observed",
+    "regional_pooling": {
+      "enabled": true,
+      "spread_threshold": 0.15,
+      "method": "shrink_toward_national_median_when_volatile"
+    }
+  },
+  "models": [
+    {
+      "model_id": "seasonal_naive",
+      "formula": "forecast(t) = observed(t-12)",
+      "description": "전년 동월 관측값"
+    },
+    {
+      "model_id": "seasonal_growth",
+      "formula": "forecast(t) = observed(t-12) * robust_growth_factor",
+      "description": "전년 동월 × YTD 중앙 성장률"
+    }
+  ],
+  "model_blend_weights": {
+    "seasonal_growth": 0.0,
+    "seasonal_naive": 1.0
+  },
+  "chosen_model_id": "seasonal_naive",
+  "model_selection_rule": "lower_WAPE_on_2023_2024_backtest_wins_100pct_weight",
+  "interval_method": "empirical_80pct_from_stable_backtest_pct_errors",
+  "interval_pct_lower": -10.31,
+  "interval_pct_upper": 28.7,
+  "growth_factor_by_sido": {
+    "서울": 0.97,
+    "부산": 0.8754,
+    "대구": 0.9734,
+    "인천": 1.007,
+    "광주": 1.0023,
+    "대전": 0.9662,
+    "울산": 0.9487,
+    "세종": 1.0925,
+    "경기": 1.0683,
+    "강원": 1.0302,
+    "충북": 1.0052,
+    "충남": 1.0733,
+    "전북": 1.0221,
+    "전남": 1.1661,
+    "경북": 1.0369,
+    "경남": 1.0246,
+    "제주": 1.1332
+  }
+}
