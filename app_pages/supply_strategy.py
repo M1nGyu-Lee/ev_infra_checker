@@ -305,8 +305,8 @@ with tabs[1]:
                     tooltip=[
                         alt.Tooltip("권역표시:N", title="권역"),
                         alt.Tooltip("급속비중:Q", title="급속 비중%", format=".1f"),
-                        alt.Tooltip("fast:Q", title="급속 누적", format=",.0f"),
-                        alt.Tooltip("slow:Q", title="완속 누적", format=",.0f"),
+                        alt.Tooltip("급속:Q", title="급속 누적", format=",.0f"),
+                        alt.Tooltip("완속:Q", title="완속 누적", format=",.0f"),
                     ],
                 )
                 .properties(height=360),
@@ -385,16 +385,16 @@ with tabs[1]:
                 "권역표시",
                 "급속비중",
                 "fast_share_delta",
-                "fast",
-                "slow",
+                "급속",
+                "완속",
                 "완속급속비",
             ]
         ].rename(
             columns={
                 "급속비중": "급속 비중(%)",
                 "fast_share_delta": "직전 대비(%p)",
-                "fast": "급속 누적",
-                "slow": "완속 누적",
+                "급속": "급속 누적",
+                "완속": "완속 누적",
                 "완속급속비": "완속/급속",
             }
         )
