@@ -9,6 +9,7 @@ from charger_dashboard.data import (
     METRIC_META,
     SIDO_ORDER,
     load_charge_panel,
+    load_national_charge_ev_monthly,
     load_ytd_compare,
 )
 from charger_dashboard.ui import (
@@ -25,21 +26,13 @@ priority_banner(
 scope_notice()
 
 panel_all = load_charge_panel()
-nat = (
-    panel_all.groupby("기준월", as_index=False)
-    .agg(
-        ev_count=("전기차등록대수", "sum"),
-        charge_kwh_sum=("충전량_kWh", "sum"),
-        active_charger_count=("활성충전기수", "sum"),
-    )
-    .assign(date=lambda d: pd.to_datetime(d["기준월"], format="%Y-%m"))
-)
+nat = load_national_charge_ev_monthly()
 nat_complete = nat[nat["date"].dt.year <= 2024]
 if len(nat_complete) >= 24:
-    y2023 = nat_complete[nat_complete["date"].dt.year == 2023]["충전량_kWh"].sum()
-    y2024 = nat_complete[nat_complete["date"].dt.year == 2024]["충전량_kWh"].sum()
-    ev2023 = nat_complete[nat_complete["date"].dt.year == 2023]["전기차등록대수"].iloc[-1]
-    ev2024 = nat_complete[nat_complete["date"].dt.year == 2024]["전기차등록대수"].iloc[-1]
+    y2023 = nat_complete.loc[nat_complete["date"].dt.year == 2023, "충전량_kWh"].sum()
+    y2024 = nat_complete.loc[nat_complete["date"].dt.year == 2024, "충전량_kWh"].sum()
+    ev2023 = nat_complete.loc[nat_complete["date"].dt.year == 2023, "전기차등록대수"].iloc[-1]
+    ev2024 = nat_complete.loc[nat_complete["date"].dt.year == 2024, "전기차등록대수"].iloc[-1]
     if y2023 > 0 and ev2023 > 0:
         charge_chg = (y2024 / y2023 - 1) * 100
         ev_chg = (ev2024 / ev2023 - 1) * 100

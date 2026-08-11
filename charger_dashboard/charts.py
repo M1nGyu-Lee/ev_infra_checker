@@ -136,20 +136,33 @@ def choropleth(
     metric: str,
     year: int,
 ) -> alt.Chart:
+    """Sido choropleth with ASCII top-level join key (Altair-safe) and Korea-centered mercator."""
     meta = METRIC_META[metric]
-    values = metric_df[["시도", metric, "rank"]].copy()
-    geo_data = alt.Data(values=geojson["features"])
+    values = metric_df.copy()
+    if "시도" in values.columns:
+        values = values.rename(columns={"시도": "sido"})
+    elif "시도" in values.columns:
+        values = values.rename(columns={"시도": "sido"})
+    values = values[["sido", metric, "rank"]].copy()
+
+    features: list[dict] = []
+    for feat in geojson.get("features", []):
+        props = feat.get("properties") or {}
+        sido = props.get("시도") or props.get("시도") or props.get("sido")
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": feat["geometry"],
+                "sido": sido,
+            }
+        )
 
     return (
-        alt.Chart(geo_data)
-        .mark_geoshape(stroke="#FFFFFF", strokeWidth=1.2)
+        alt.Chart(alt.Data(values=features))
+        .mark_geoshape(stroke="#FFFFFF", strokeWidth=1.0)
         .transform_lookup(
-            lookup="properties.시도",
-            from_=alt.LookupData(
-                values,
-                key="시도",
-                fields=[metric, "rank"],
-            ),
+            lookup="sido",
+            from_=alt.LookupData(values, "sido", [metric, "rank"]),
         )
         .encode(
             color=alt.Color(
@@ -158,7 +171,7 @@ def choropleth(
                 scale=alt.Scale(scheme="tealblues"),
             ),
             tooltip=[
-                alt.Tooltip("properties.시도:N", title="시·도"),
+                alt.Tooltip("sido:N", title="시·도"),
                 alt.Tooltip(
                     f"{metric}:Q",
                     title=meta["label"],
@@ -167,7 +180,7 @@ def choropleth(
                 alt.Tooltip("rank:Q", title="부담 방향 순위"),
             ],
         )
-        .project(type="mercator")
+        .project(type="mercator", scale=5500, center=[127.7, 35.9])
         .properties(
             height=560,
             title=f"{year}년 {meta['label']}",

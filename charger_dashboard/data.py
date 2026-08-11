@@ -12,7 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS = ROOT / "data" / "analysis"
 FORECAST = ROOT / "data" / "forecast"
 PROCESSED = ROOT / "data" / "processed"
-GEOJSON_PATH = ROOT / "data" / "geojson" / "korea_sido_wgs84.geojson"
+GEOJSON_PATH = ROOT / "data" / "geojson" / "korea_sido_wgs84_light.geojson"
+if not GEOJSON_PATH.exists():
+    GEOJSON_PATH = ROOT / "data" / "geojson" / "korea_sido_wgs84.geojson"
 
 SIDO_ORDER = [
     "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
@@ -107,6 +109,24 @@ def load_charge_monthly() -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def load_charge_panel() -> pd.DataFrame:
     df = _read_csv("charge_sido_monthly_panel.csv")
+    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
+    return df
+
+
+@st.cache_data(show_spinner=False)
+def load_national_charge_ev_monthly() -> pd.DataFrame:
+    """Pre-aggregated national EV + public-fast charge series (fast path for trends)."""
+    path = ANALYSIS / "national_charge_ev_monthly.csv"
+    if not path.exists():
+        # fallback: aggregate panel once (still cached)
+        panel = load_charge_panel()
+        df = panel.groupby("기준월", as_index=False).agg(
+            ev_count=("전기차등록대수", "sum"),
+            charge_kwh_sum=("충전량_kWh", "sum"),
+            active_charger_count=("활성충전기수", "sum"),
+        )
+    else:
+        df = pd.read_csv(path, encoding="utf-8-sig")
     df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
     return df
 
