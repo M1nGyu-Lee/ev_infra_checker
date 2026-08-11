@@ -255,6 +255,49 @@ def data_status_notice(year: int) -> None:
         )
 
 
+def year_selector(
+    years: list[int],
+    *,
+    key: str,
+    default: int | None = None,
+    label: str = "기준연도",
+) -> int:
+    """Page-local year control (sidebar global filter removed)."""
+    if not years:
+        raise ValueError("선택 가능한 연도가 없습니다.")
+    preferred = default
+    if preferred is None and "selected_year" in st.session_state:
+        preferred = int(st.session_state.selected_year)
+    if preferred not in years:
+        preferred = 2025 if 2025 in years else years[-1]
+    idx = years.index(preferred)
+    chosen = st.selectbox(label, years, index=idx, key=key)
+    st.session_state.selected_year = int(chosen)
+    return int(chosen)
+
+
+def chargeinfo_region_label(name: str) -> str:
+    from charger_dashboard.data import CHARGEINFO_REGION_LABEL
+
+    return CHARGEINFO_REGION_LABEL.get(str(name), str(name))
+
+
+def hint_badge_html(hint: str) -> str:
+    """Colored pill for quadrant install hints."""
+    styles = {
+        "유지·관망": ("#ecfdf5", "#047857", "#a7f3d0"),
+        "급속/핫스팟 검토": ("#fff7ed", "#c2410c", "#fed7aa"),
+        "완속·거점 검토": ("#eff6ff", "#1d4ed8", "#bfdbfe"),
+        "수요·입지 추가 확인": ("#fef2f2", "#b91c1c", "#fecaca"),
+    }
+    bg, fg, border = styles.get(hint, ("#f8fafc", "#334155", "#e2e8f0"))
+    return (
+        f'<span style="display:inline-block;padding:0.25rem 0.65rem;border-radius:999px;'
+        f'background:{bg};color:{fg};border:1px solid {border};font-weight:600;'
+        f'font-size:0.85rem;">{hint}</span>'
+    )
+
+
 def dataframe_download(df: pd.DataFrame, filename: str, label: str = "표 CSV 다운로드") -> None:
     st.download_button(
         label,

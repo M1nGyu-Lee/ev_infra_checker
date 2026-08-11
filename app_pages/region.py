@@ -7,6 +7,7 @@ import streamlit as st
 from charger_dashboard.data import (
     METRIC_META,
     SIDO_ORDER,
+    available_years,
     load_charge_annual,
     load_charge_panel,
     load_charger_annual,
@@ -21,6 +22,7 @@ from charger_dashboard.ui import (
     priority_banner,
     scope_notice,
     status_badge,
+    year_selector,
 )
 
 priority_banner(
@@ -32,13 +34,12 @@ master = load_master()
 panel = load_charge_panel()
 charge_annual = load_charge_annual()
 charger_annual = load_charger_annual()
-year = int(st.session_state.selected_year)
-global_region = st.session_state.selected_sido
+year = year_selector(available_years(), key="region_year")
 
 region = st.selectbox(
     "분석할 시·도",
     SIDO_ORDER,
-    index=SIDO_ORDER.index(global_region) if global_region in SIDO_ORDER else 0,
+    index=0,
     key="region_page_sido",
 )
 scope_notice()

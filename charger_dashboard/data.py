@@ -21,6 +21,26 @@ SIDO_ORDER = [
     "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
 ]
 
+# Chargeinfo packs multiple provinces into 8 mixed regions (city + province groups).
+CHARGEINFO_REGION_LABEL = {
+    "서울": "서울",
+    "인천": "인천",
+    "제주": "제주",
+    "경기": "경기권",
+    "강원": "강원권",
+    "충청": "충청권",
+    "전라": "전라권",
+    "경상": "경상권",
+}
+
+# Map metrics where "상대 부담" is meaningful (not raw stock counts).
+BURDEN_METRICS = {
+    "EV천대당설치급속",
+    "EV천대당활성급속",
+    "활성기당충전량",
+    "충전량_kWh",
+}
+
 METRIC_META = {
     "전기차등록대수": {
         "label": "전기차 등록대수",

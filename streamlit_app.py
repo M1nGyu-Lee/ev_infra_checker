@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from charger_dashboard.data import SIDO_ORDER, available_years
+from charger_dashboard.data import available_years
 from charger_dashboard.ui import inject_app_styles
 
 st.set_page_config(
@@ -71,32 +71,24 @@ with st.sidebar:
         '<div class="ev-sidebar-sub">공공급속 · 급·완속 보급 대시보드</div>',
         unsafe_allow_html=True,
     )
-    st.markdown("##### 공통 필터")
-    st.selectbox(
-        "기준연도",
-        years,
-        key="selected_year",
-        help="모든 페이지가 공유하는 기준연도입니다.",
-    )
-    st.selectbox(
-        "기준지역",
-        ["전국", *SIDO_ORDER],
-        key="selected_sido",
-        help="전국 또는 한 개 시·도를 선택합니다.",
-    )
-    st.divider()
-    st.markdown("##### 발표 구성")
+    st.markdown("##### 이 앱에서 보는 것")
     st.markdown(
         """
-        1. **대국민** — 지도 · 이용 추이  
-        2. **사업자** — 급·완속 설치 힌트  
-        3. **기초** — 전국 총량·기간 상태
+        - **지도** — 시·도 이용·공급 부담  
+        - **추이** — 공공급속 이용 변화  
+        - **설치 판단** — 급·완속 사분면 힌트  
+        - **총량** — 전국 규모·기간 상태
         """
     )
     st.divider()
+    st.markdown("##### 데이터 범위")
     st.caption("환경부 공공급속 · 17시·도")
     st.caption("충전량 관측 2019-01부터 2025-08까지")
-    st.caption("차지인포 급·완속 · 8권역")
+    st.caption("차지인포 급·완속 · 8권역(시·도 혼합)")
+    st.divider()
+    st.markdown("##### 읽기 팁")
+    st.caption("각 페이지 안의 연도·스냅샷·시·도 필터를 먼저 맞춘 뒤 그래프를 비교하세요.")
+    st.caption("상대 비교이며 절대 부족 판정이 아닙니다.")
 
 st.title(f"{page.icon} {page.title}")
 page.run()
