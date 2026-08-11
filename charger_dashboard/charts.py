@@ -136,52 +136,65 @@ def choropleth(
     metric: str,
     year: int,
 ) -> alt.Chart:
-    """Sido choropleth with ASCII top-level join key (Altair-safe) and Korea-centered mercator."""
+    """Sido choropleth: pre-join in pandas, ASCII-only Altair fields (Cloud-safe)."""
     meta = METRIC_META[metric]
     values = metric_df.copy()
     if "시도" in values.columns:
         values = values.rename(columns={"시도": "sido"})
     elif "시도" in values.columns:
         values = values.rename(columns={"시도": "sido"})
-    values = values[["sido", metric, "rank"]].copy()
+    values = values[["sido", metric, "rank"]].rename(columns={metric: "value"})
+    lookup = values.set_index("sido")
 
     features: list[dict] = []
     for feat in geojson.get("features", []):
         props = feat.get("properties") or {}
         sido = props.get("시도") or props.get("시도") or props.get("sido")
+        if sido is None or sido not in lookup.index:
+            continue
+        row = lookup.loc[sido]
+        value = row["value"]
+        rank = row["rank"]
+        if pd.isna(value):
+            continue
         features.append(
             {
                 "type": "Feature",
                 "geometry": feat["geometry"],
-                "sido": sido,
+                "sido": str(sido),
+                "value": float(value),
+                "rank": int(rank) if pd.notna(rank) else None,
             }
+        )
+
+    if not features:
+        # empty chart placeholder
+        return (
+            alt.Chart(pd.DataFrame({"x": [0], "y": [0]}))
+            .mark_text(text="지도 데이터 조인 실패", dy=20)
+            .encode(x=alt.value(200), y=alt.value(200))
+            .properties(height=560, title=f"{year}년 {meta['label']}")
         )
 
     return (
         alt.Chart(alt.Data(values=features))
         .mark_geoshape(stroke="#FFFFFF", strokeWidth=1.0)
-        .transform_lookup(
-            lookup="sido",
-            from_=alt.LookupData(values, "sido", [metric, "rank"]),
-        )
         .encode(
             color=alt.Color(
-                f"{metric}:Q",
+                "value:Q",
                 title=f"{meta['label']} ({meta['unit']})",
                 scale=alt.Scale(scheme="tealblues"),
+                legend=alt.Legend(format=meta["format"].replace(",", "")),
             ),
             tooltip=[
                 alt.Tooltip("sido:N", title="시·도"),
-                alt.Tooltip(
-                    f"{metric}:Q",
-                    title=meta["label"],
-                    format=meta["format"],
-                ),
+                alt.Tooltip("value:Q", title=meta["label"], format=meta["format"]),
                 alt.Tooltip("rank:Q", title="부담 방향 순위"),
             ],
         )
         .project(type="mercator", scale=5500, center=[127.7, 35.9])
         .properties(
+            width=520,
             height=560,
             title=f"{year}년 {meta['label']}",
         )
@@ -190,24 +203,30 @@ def choropleth(
 
 def ranked_bar(df: pd.DataFrame, metric: str) -> alt.Chart:
     meta = METRIC_META[metric]
+    plot = df.copy()
+    if "시도" in plot.columns:
+        plot = plot.rename(columns={"시도": "sido"})
+    elif "시도" in plot.columns:
+        plot = plot.rename(columns={"시도": "sido"})
+    plot = plot.rename(columns={metric: "value"})
     return (
-        alt.Chart(df)
+        alt.Chart(plot)
         .mark_bar()
         .encode(
-            x=alt.X(f"{metric}:Q", title=f"{meta['label']} ({meta['unit']})"),
+            x=alt.X("value:Q", title=f"{meta['label']} ({meta['unit']})"),
             y=alt.Y(
-                "시도:N",
+                "sido:N",
                 title="시·도",
-                sort=alt.EncodingSortField(field=metric, order="descending"),
+                sort=alt.EncodingSortField(field="value", order="descending"),
             ),
             color=alt.Color(
-                f"{metric}:Q",
+                "value:Q",
                 title=meta["label"],
                 scale=alt.Scale(scheme="tealblues"),
             ),
             tooltip=[
-                alt.Tooltip("시도:N", title="시·도"),
-                alt.Tooltip(f"{metric}:Q", title=meta["label"], format=meta["format"]),
+                alt.Tooltip("sido:N", title="시·도"),
+                alt.Tooltip("value:Q", title=meta["label"], format=meta["format"]),
                 alt.Tooltip("rank:Q", title="순위"),
             ],
         )
