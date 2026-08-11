@@ -24,7 +24,7 @@ layers = pd.DataFrame(
             "계층": "잠재 수요",
             "질문": "전기차가 얼마나 증가했는가?",
             "핵심 파일": "ev_sido_monthly.csv",
-            "범위": "국토부 · 17개 시·도 · 2019-01~2026-06",
+            "범위": "국토부 · 17개 시·도 · 2019-01부터 2026-06까지",
         },
         {
             "계층": "설치 공급",
@@ -36,13 +36,13 @@ layers = pd.DataFrame(
             "계층": "실제 이용 공급",
             "질문": "실제로 이용 기록이 있는 급속기는 몇 개인가?",
             "핵심 파일": "charge_sido_annual.csv",
-            "범위": "환경부 공공급속 · 2019~2025-08",
+            "범위": "환경부 공공급속 · 2019년부터 2025-08까지",
         },
         {
             "계층": "한전 급속 보완",
             "질문": "한전망 급속 충전량 결측을 어떻게 채웠는가?",
             "핵심 파일": "kepco_charge_sido_monthly_trend.csv",
-            "범위": "환경부+부하+충전소 현황 · 2019~2025 · 방법론 선행 명시",
+            "범위": "환경부+부하+충전소 현황 · 2019년부터 2025년까지 · 방법론 선행 명시",
         },
         {
             "계층": "수요–공급 부담",
@@ -54,7 +54,7 @@ layers = pd.DataFrame(
             "계층": "최신 동기간 비교",
             "질문": "2025년 이용량은 전년 같은 기간보다 늘었는가?",
             "핵심 파일": "charge_sido_ytd_compare.csv",
-            "범위": "2024 1~8월 vs 2025 1~8월",
+            "범위": "2024년 1–8월 vs 2025년 1–8월",
         },
     ]
 )
@@ -67,14 +67,14 @@ with tabs[0]:
         [
             ["ev_sido_monthly.csv", "시·도×월", "EV 월별 추이"],
             ["ev_sido_annual.csv", "시·도×연", "연말 EV와 부분연도 상태"],
-            ["charger_public_fast_sido_annual.csv", "시·도×연", "2019~2022 설치 재고"],
+            ["charger_public_fast_sido_annual.csv", "시·도×연", "2019–2022 설치 재고"],
             ["charge_sido_monthly.csv", "시·도×월", "충전량·활성기 월별 추이 (관측)"],
             ["charge_sido_monthly_trend.csv", "시·도×월", "관측+추정 통합 추이"],
             ["kepco_charge_sido_monthly_trend.csv", "시·도×월", "한전 급속 관측+보완 추이"],
             ["kepco_charge_sido_monthly_forecast.csv", "시·도×월", "한전 급속 보완(추정) 전용"],
             ["charge_sido_annual.csv", "시·도×연", "연간 합·피크·활성기"],
             ["charge_sido_monthly_panel.csv", "시·도×월", "동월 EV와 충전량 결합"],
-            ["charge_sido_ytd_compare.csv", "시·도", "2024–2025 1~8월 비교"],
+            ["charge_sido_ytd_compare.csv", "시·도", "2024–2025년 1–8월 비교"],
             ["sido_year_master.csv", "시·도×연", "지도·순위·KPI 통합"],
         ],
         columns=["파일", "한 행의 단위", "주 분석"],
@@ -123,7 +123,7 @@ with tabs[2]:
     st.dataframe(deck, hide_index=True)
 
 with tabs[3]:
-    st.caption("환경부 공공급속 — 2025년 9~12월 결측 보완")
+    st.caption("환경부 공공급속 — 2025년 9월부터 12월까지 결측 보완")
     try:
         manifest = load_forecast_manifest()
     except FileNotFoundError as exc:
@@ -195,7 +195,7 @@ with tabs[4]:
     ta = kepco_manifest["trend_analysis"]
     st.markdown(
         f"""
-        - **교정 구간:** {kepco_manifest["calibration_period"][0]} ~ {kepco_manifest["calibration_period"][1]}
+        - **교정 구간:** {kepco_manifest["calibration_period"][0]}부터 {kepco_manifest["calibration_period"][1]}까지
         - **환경부–한전 비율:** {ta["moe_kepco_ratio_calibration"]}
         - **부하 지수:** {ta["load_index_formula"]}
         - **충전소 배분:** {ta["station_share_formula"]}
@@ -233,10 +233,10 @@ with tabs[5]:
         "신규 설치 0기로 해석하면 안 됩니다."
     )
     st.warning(
-        "2025년 충전량은 1~8월 자료입니다. 완전연도와 직접 비교하지 않고 YTD 표를 사용합니다."
+        "2025년 충전량은 1월부터 8월까지 자료입니다. 완전연도와 직접 비교하지 않고 YTD 표를 사용합니다."
     )
     st.warning(
-        "2025년 9~12월 **환경부** 충전량은 환경부 관측 시계열만으로 추정했습니다."
+        "2025년 9월부터 12월까지 **환경부** 충전량은 환경부 관측 시계열만으로 추정했습니다."
     )
     st.warning(
         "한전 급속 충전량은 원본이 2020년 상반기만 있어, "

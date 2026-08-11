@@ -61,8 +61,8 @@ def paired_ytd_chart(df: pd.DataFrame, metric_prefix: str) -> alt.Chart:
     )
     chart_df["period"] = chart_df["period"].map(
         {
-            value_columns[0]: "2024년 1~8월",
-            value_columns[1]: "2025년 1~8월",
+            value_columns[0]: "2024년 1–8월",
+            value_columns[1]: "2025년 1–8월",
         }
     )
     return (

@@ -33,14 +33,14 @@
     }
   ],
   "trend_analysis": {
-    "ytd_comparison": "2025-01~08 vs 2024-01~08",
+    "ytd_comparison": "2025-01–08 vs 2024-01–08",
     "ytd_growth_method": "median_monthly_yoy",
     "growth_clip": [
       0.85,
       1.25
     ],
     "national_growth_factor": 1.0426,
-    "seasonality_reference": "2024-09~12 same_month_observed",
+    "seasonality_reference": "2024-09–12 same_month_observed",
     "regional_pooling": {
       "enabled": true,
       "spread_threshold": 0.15,

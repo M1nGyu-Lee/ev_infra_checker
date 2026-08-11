@@ -239,8 +239,8 @@ def scope_notice() -> None:
 def data_status_notice(year: int) -> None:
     if year == 2025:
         st.warning(
-            "2025년 충전량은 1~8월 관측치입니다. 완전연도 합계 대신 "
-            "2024년 1~8월과의 YTD 비교를 사용하세요.",
+            "2025년 충전량은 1월부터 8월까지 관측치입니다. 완전연도 합계 대신 "
+            "2024년 1월부터 8월까지의 YTD 비교를 사용하세요.",
             icon=":material/calendar_month:",
         )
     elif year >= 2026:

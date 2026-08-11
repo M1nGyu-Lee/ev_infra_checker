@@ -95,7 +95,7 @@ with st.sidebar:
     )
     st.divider()
     st.caption("환경부 공공급속 · 17시·도")
-    st.caption("충전량 관측 2019-01 ~ 2025-08")
+    st.caption("충전량 관측 2019-01부터 2025-08까지")
     st.caption("차지인포 급·완속 · 8권역")
 
 st.title(f"{page.icon} {page.title}")

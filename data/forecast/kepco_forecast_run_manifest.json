@@ -34,7 +34,7 @@
     }
   ],
   "trend_analysis": {
-    "moe_kepco_ratio_calibration": "2020-01~2020-06 median ratio with pooling",
+    "moe_kepco_ratio_calibration": "2020-01–2020-06 median ratio with pooling",
     "load_index_formula": "load_kw_sum(t) / load_kw_sum(2020-same-month)",
     "station_share_formula": "station_count(sido,year) / national_station_count(year)"
   },

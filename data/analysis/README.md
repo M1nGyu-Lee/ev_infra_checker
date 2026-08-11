@@ -22,7 +22,7 @@ pytest tests/test_analysis_tables.py -q
 | `charge_sido_monthly.csv` | 시·도×월 | 월별 충전·활성 충전기 |
 | `charge_sido_annual.csv` | 시·도×연 | 연간 충전·피크·`data_status` |
 | `charge_sido_monthly_panel.csv` | 시·도×월 | EV + 충전량 결합 (`kwh_per_ev` 등) |
-| `charge_sido_ytd_compare.csv` | 시·도 | 2024 vs 2025 1~8월 동기간 비교 |
+| `charge_sido_ytd_compare.csv` | 시·도 | 2024 vs 2025년 1–8월 동기간 비교 |
 | `sido_year_master.csv` | 시·도×연 | **조인·파생지표 마스터** |
 
 ## 마스터 해석

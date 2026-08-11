@@ -61,7 +61,7 @@ kwh_line = base.mark_line(color="#0F766E").encode(
 st.altair_chart(
     alt.layer(ev_line, kwh_line).resolve_scale(y="independent").properties(height=280),
 )
-st.caption("파란선=EV, 초록선=공공급속 충전량(별도 축). 2025년은 1~8월만 있습니다.")
+st.caption("파란선=EV, 초록선=공공급속 충전량(별도 축). 2025년은 1월부터 8월까지만 있습니다.")
 
 global_region = st.session_state.selected_sido
 default_regions = [global_region] if global_region != "전국" else ["서울", "경기", "제주"]
@@ -181,8 +181,8 @@ with tabs[1]:
         hide_index=True,
         column_config={
             "시도": st.column_config.TextColumn("시·도", pinned=True),
-            "충전량_2024_YTD": st.column_config.NumberColumn("2024 1~8월", format="%.2f"),
-            "충전량_2025_YTD": st.column_config.NumberColumn("2025 1~8월", format="%.2f"),
+            "충전량_2024_YTD": st.column_config.NumberColumn("2024년 1–8월", format="%.2f"),
+            "충전량_2025_YTD": st.column_config.NumberColumn("2025년 1–8월", format="%.2f"),
             "충전량_YTD증감률": st.column_config.NumberColumn("증감률", format="%.2f%%"),
             "EV당충전량_2024_YTD": st.column_config.NumberColumn("2024 EV당 kWh", format="%.2f"),
             "EV당충전량_2025_YTD": st.column_config.NumberColumn("2025 EV당 kWh", format="%.2f"),
@@ -190,4 +190,4 @@ with tabs[1]:
             "활성기_2025_YTD": st.column_config.NumberColumn("2025 활성기", format="localized"),
         },
     )
-    st.caption("두 연도 모두 1~8월만 사용한 동일 기간 비교입니다.")
+    st.caption("두 연도 모두 1월부터 8월까지만 사용한 동일 기간 비교입니다.")
