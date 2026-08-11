@@ -109,7 +109,7 @@ st.dataframe(
     hide_index=True,
     column_config={
         "시도": st.column_config.TextColumn("시·도", pinned=True),
-        지표코드: st.column_config.NumberColumn(
+        metric: st.column_config.NumberColumn(
             f"{meta['label']} ({meta['unit']})",
             format=f"%.2f" if ".2" in meta["format"] else "localized",
         ),

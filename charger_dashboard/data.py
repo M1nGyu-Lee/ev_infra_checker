@@ -289,7 +289,7 @@ def latest_complete_charge_year() -> int:
     return int(complete.max())
 
 
-def national_year(master: pd.DataFrame, 연도: int) -> pd.Series:
+def national_year(master: pd.DataFrame, year: int) -> pd.Series:
     subset = master[master["연도"] == year]
     additive = [
         "전기차등록대수",
@@ -331,7 +331,7 @@ def filter_regions(df: pd.DataFrame, regions: list[str]) -> pd.DataFrame:
     return df[df["시도"].isin(regions)].copy()
 
 
-def rank_for_map(master: pd.DataFrame, 연도: int, 지표코드: str) -> pd.DataFrame:
+def rank_for_map(master: pd.DataFrame, year: int, metric: str) -> pd.DataFrame:
     columns = ["시도", metric, "기간상태", "설비상태"]
     out = master.loc[master["연도"] == year, columns].dropna(subset=[metric]).copy()
     if out.empty:

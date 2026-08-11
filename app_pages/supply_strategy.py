@@ -117,9 +117,9 @@ with tabs[0]:
         def _hint(row: pd.Series) -> str:
             hi_fast = row["급속_대당"] >= med_fast
             hi_slow = row["완속_대당"] >= med_slow
-            if hi_fast and hi_완속:
+            if hi_fast and hi_slow:
                 return "급·완속 모두 상대적 여유 → 유지·관망"
-            if (not hi_fast) and hi_완속:
+            if (not hi_fast) and hi_slow:
                 return "완속 상대 여유·급속 상대 부족 → 급속/핫스팟 검토"
             if hi_fast and (not hi_slow):
                 return "급속 상대 여유·완속 상대 부족 → 완속·거점 검토"
@@ -172,7 +172,7 @@ with tabs[0]:
             width="stretch",
         )
         st.caption(
-            f"중앙값 — 급속 {med_급속:.2f} · 완속 {med_완속:.2f} 기/대. "
+            f"중앙값 — 급속 {med_fast:.2f} · 완속 {med_slow:.2f} 기/대. "
             "체크리스트는 아래 공공급속·한전 탭과 함께 보세요."
         )
 
@@ -266,8 +266,8 @@ with tabs[1]:
         )
         intensity = latest_avg_slow / latest_avg_fast if latest_avg_fast else float("nan")
         st.caption(
-            f"{selected_ratio_ref} 8권역 평균: 급속 **{latest_avg_급속:.2f}** · "
-            f"완속 **{latest_avg_완속:.2f}** 기/대 "
+            f"{selected_ratio_ref} 8권역 평균: 급속 **{latest_avg_fast:.2f}** · "
+            f"완속 **{latest_avg_slow:.2f}** 기/대 "
             f"(완속/급속 강도 ≈ **{intensity:.1f}배**). "
             "제주·인천은 상대적으로 낮고, 강원은 급속 강도가 높습니다."
         )

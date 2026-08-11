@@ -109,7 +109,7 @@ with tabs[0]:
             "EV당충전량",
             "활성기당충전량",
         ],
-        format_func=lambda 지표코드: METRIC_META[metric]["label"],
+        format_func=lambda metric: METRIC_META[metric]["label"],
         default="충전량_kWh",
         key="trend_charge_metric",
     )

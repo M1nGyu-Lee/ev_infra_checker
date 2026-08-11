@@ -13,6 +13,8 @@ COLORS = {
     "active": "#D97706",
     "muted": "#64748B",
     "danger": "#DC2626",
+    "완속": "#1D4ED8",
+    "급속": "#DC2626",
 }
 
 
@@ -131,8 +133,8 @@ def burden_scatter(df: pd.DataFrame) -> alt.Chart:
 def choropleth(
     geojson: dict,
     metric_df: pd.DataFrame,
-    지표코드: str,
-    연도: int,
+    metric: str,
+    year: int,
 ) -> alt.Chart:
     meta = METRIC_META[metric]
     values = metric_df[["시도", metric, "rank"]].copy()
@@ -173,7 +175,7 @@ def choropleth(
     )
 
 
-def ranked_bar(df: pd.DataFrame, 지표코드: str) -> alt.Chart:
+def ranked_bar(df: pd.DataFrame, metric: str) -> alt.Chart:
     meta = METRIC_META[metric]
     return (
         alt.Chart(df)
