@@ -495,9 +495,11 @@ with tabs[2]:
     dataframe_download(active, f"public_fast_active_{year}.csv")
 
     if len(charge_annual):
-        nat = charge_annual.groupby("연도", as_index=False).agg(
-            charge_kwh_sum=("충전량_kWh", "sum"),
-            active_charger_count=("활성충전기수", "sum"),
+        nat = (
+            charge_annual.groupby("연도", as_index=False)[
+                ["충전량_kWh", "활성충전기수"]
+            ]
+            .sum(min_count=1)
         )
         st.subheader("전국 공공급속 이용 추이")
         st.altair_chart(

@@ -118,12 +118,12 @@ def load_national_charge_ev_monthly() -> pd.DataFrame:
     """Pre-aggregated national EV + public-fast charge series (fast path for trends)."""
     path = ANALYSIS / "national_charge_ev_monthly.csv"
     if not path.exists():
-        # fallback: aggregate panel once (still cached)
         panel = load_charge_panel()
-        df = panel.groupby("기준월", as_index=False).agg(
-            ev_count=("전기차등록대수", "sum"),
-            charge_kwh_sum=("충전량_kWh", "sum"),
-            active_charger_count=("활성충전기수", "sum"),
+        df = (
+            panel.groupby("기준월", as_index=False)[
+                ["전기차등록대수", "충전량_kWh", "활성충전기수"]
+            ]
+            .sum(min_count=1)
         )
     else:
         df = pd.read_csv(path, encoding="utf-8-sig")
