@@ -184,8 +184,7 @@ def render():
             else:
                 cur["fast_share_delta"] = pd.NA
 
-            left, right = st.columns([1, 2])
-            with left, st.container(border=True):
+            with st.container(border=True):
                 st.markdown(f"**{selected_ref} 권역별 급속 비중**")
                 share_bar = cur.set_index("권역표시")[["급속비중"]].rename(
                     columns={"급속비중": "급속 비중 (%)"}
@@ -195,7 +194,8 @@ def render():
                     use_container_width=True,
                     config={"displayModeBar": False},
                 )
-            with right, st.container(border=True):
+
+            with st.container(border=True):
                 title = (
                     f"**직전 스냅샷({prev_ref}) 대비 급속 비중 변화**"
                     if prev_ref
