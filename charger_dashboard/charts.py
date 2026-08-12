@@ -146,3 +146,30 @@ def burden_bar_frame(df, metric):
     out = plot.sort_values("burden_score", ascending=True).set_index("sido")[["value"]]
     out = out.rename(columns={"value": meta["label"]})
     return out
+
+
+def category_bar_chart(df, *, height=None):
+    """세로 막대 차트 — x축 카테고리 이름을 가로(0도)로 표시.
+
+    st.bar_chart는 라벨을 세로로 돌리는 경우가 많아, Plotly로 동일 레이아웃을 씁니다.
+    df 형식: 인덱스=카테고리(권역·시도·연도), 칼럼 1개=값.
+    """
+    plot_df = df.reset_index()
+    x_col = plot_df.columns[0]
+    y_col = plot_df.columns[1]
+    n = len(plot_df)
+    if height is None:
+        height = max(300, 80 + 24 * n)
+    fig = px.bar(plot_df, x=x_col, y=y_col)
+    fig.update_layout(
+        xaxis_tickangle=0,
+        xaxis_type="category",
+        showlegend=False,
+        height=height,
+        margin=dict(l=48, r=16, t=12, b=72),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        color_discrete_sequence=[COLORS["charge"]],
+    )
+    fig.update_xaxes(tickfont=dict(size=12))
+    return fig

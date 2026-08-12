@@ -3,6 +3,7 @@
 import pandas as pd
 import streamlit as st
 
+from charger_dashboard.charts import category_bar_chart
 from charger_dashboard.data import (
     available_years,
     load_charge_annual,
@@ -189,7 +190,11 @@ def render():
                 share_bar = cur.set_index("권역표시")[["급속비중"]].rename(
                     columns={"급속비중": "급속 비중 (%)"}
                 )
-                st.bar_chart(share_bar, horizontal=True)
+                st.plotly_chart(
+                    category_bar_chart(share_bar),
+                    use_container_width=True,
+                    config={"displayModeBar": False},
+                )
             with right, st.container(border=True):
                 title = (
                     f"**직전 스냅샷({prev_ref}) 대비 급속 비중 변화**"
@@ -203,7 +208,11 @@ def render():
                         .set_index("권역표시")[["fast_share_delta"]]
                         .rename(columns={"fast_share_delta": "변화 (%p)"})
                     )
-                    st.bar_chart(delta_bar, horizontal=True)
+                    st.plotly_chart(
+                        category_bar_chart(delta_bar),
+                        use_container_width=True,
+                        config={"displayModeBar": False},
+                    )
                     st.caption("양수=급속 비중 상승, 음수=하락")
                 else:
                     st.info("더 이른 스냅샷이 없어 변화량을 계산할 수 없습니다.")
@@ -227,7 +236,11 @@ def render():
                     intensity = snap.set_index("권역표시")[["급속_대당"]].rename(
                         columns={"급속_대당": "급속 (기/대)"}
                     )
-                    st.bar_chart(intensity, horizontal=True)
+                    st.plotly_chart(
+                        category_bar_chart(intensity),
+                        use_container_width=True,
+                        config={"displayModeBar": False},
+                    )
 
             show = cur[
                 [
@@ -270,7 +283,11 @@ def render():
         active_bar = active.set_index("시도")[["활성기당충전량"]].rename(
             columns={"활성기당충전량": "활성기당 kWh"}
         )
-        st.bar_chart(active_bar, horizontal=True)
+        st.plotly_chart(
+            category_bar_chart(active_bar, height=520),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
         st.dataframe(active, hide_index=True)
         dataframe_download(active, f"public_fast_active_{year}.csv")
 

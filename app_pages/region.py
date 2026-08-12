@@ -3,6 +3,7 @@
 import pandas as pd
 import streamlit as st
 
+from charger_dashboard.charts import category_bar_chart
 from charger_dashboard.data import (
     METRIC_META,
     SIDO_ORDER,
@@ -178,7 +179,11 @@ def render():
                 peak_bar = peak_rows.set_index("연도")[["평균초과율"]].rename(
                     columns={"평균초과율": "월평균 대비 초과 (%)"}
                 )
-                st.bar_chart(peak_bar, horizontal=True)
+                st.plotly_chart(
+                    category_bar_chart(peak_bar),
+                    use_container_width=True,
+                    config={"displayModeBar": False},
+                )
                 st.caption("막대=피크월 충전량이 월평균보다 얼마나 높은지")
 
         if not peak_rows.empty:
