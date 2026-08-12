@@ -189,7 +189,7 @@ def render():
                 share_bar = cur.set_index("권역표시")[["급속비중"]].rename(
                     columns={"급속비중": "급속 비중 (%)"}
                 )
-                st.bar_chart(share_bar)
+                st.bar_chart(share_bar, horizontal=True)
             with right, st.container(border=True):
                 title = (
                     f"**직전 스냅샷({prev_ref}) 대비 급속 비중 변화**"
@@ -203,7 +203,7 @@ def render():
                         .set_index("권역표시")[["fast_share_delta"]]
                         .rename(columns={"fast_share_delta": "변화 (%p)"})
                     )
-                    st.bar_chart(delta_bar)
+                    st.bar_chart(delta_bar, horizontal=True)
                     st.caption("양수=급속 비중 상승, 음수=하락")
                 else:
                     st.info("더 이른 스냅샷이 없어 변화량을 계산할 수 없습니다.")
@@ -227,7 +227,7 @@ def render():
                     intensity = snap.set_index("권역표시")[["급속_대당"]].rename(
                         columns={"급속_대당": "급속 (기/대)"}
                     )
-                    st.bar_chart(intensity)
+                    st.bar_chart(intensity, horizontal=True)
 
             show = cur[
                 [
@@ -270,7 +270,7 @@ def render():
         active_bar = active.set_index("시도")[["활성기당충전량"]].rename(
             columns={"활성기당충전량": "활성기당 kWh"}
         )
-        st.bar_chart(active_bar)
+        st.bar_chart(active_bar, horizontal=True)
         st.dataframe(active, hide_index=True)
         dataframe_download(active, f"public_fast_active_{year}.csv")
 
