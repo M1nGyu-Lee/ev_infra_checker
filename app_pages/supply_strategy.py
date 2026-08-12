@@ -23,6 +23,40 @@ from charger_dashboard.ui import (
 )
 
 
+def _fast_share_insight(cur, selected_ref, prev_ref):
+    """급속 비중 표 직전에 보여 줄 자동 요약."""
+    ranked = cur.dropna(subset=["급속비중"]).sort_values("급속비중", ascending=False)
+    if ranked.empty:
+        return "이 스냅샷에 표시할 급속 비중 데이터가 없습니다."
+
+    top = ranked.iloc[0]
+    bottom = ranked.iloc[-1]
+    parts = [
+        f"**{selected_ref}** 기준 급속 비중 최고는 **{top['권역표시']}** "
+        f"({top['급속비중']:.1f}%), 최저는 **{bottom['권역표시']}** "
+        f"({bottom['급속비중']:.1f}%)입니다."
+    ]
+
+    if prev_ref and cur["fast_share_delta"].notna().any():
+        delta = cur.dropna(subset=["fast_share_delta"]).sort_values(
+            "fast_share_delta", ascending=False
+        )
+        up = delta.iloc[0]
+        down = delta.iloc[-1]
+        parts.append(
+            f"직전 **{prev_ref}** 대비 증가 폭이 가장 큰 권역은 **{up['권역표시']}** "
+            f"({up['fast_share_delta']:+.1f}%p), 감소 폭이 가장 큰 권역은 **{down['권역표시']}** "
+            f"({down['fast_share_delta']:+.1f}%p)입니다."
+        )
+    else:
+        parts.append("직전 스냅샷이 없어 비중 변화는 아래 표의 절대 비중만 참고하세요.")
+
+    parts.append(
+        "차지인포 **8권역 누적 설치 대수** 비중이며, 충전 이용·환경부 공공급속과는 별도입니다."
+    )
+    return " ".join(parts)
+
+
 def render():
     priority_banner(
         2,
@@ -240,6 +274,10 @@ def render():
                         category_bar_chart(intensity),
                         use_container_width=True,
                         config={"displayModeBar": False},
+                    )
+                    insight_callout(
+                        "급속 비중 한줄 요약",
+                        _fast_share_insight(cur, selected_ref, prev_ref),
                     )
 
             show = cur[

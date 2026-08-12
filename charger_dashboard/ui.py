@@ -9,10 +9,100 @@ from charger_dashboard.data import METRIC_META
 
 
 def inject_app_styles():
-    """예전에는 여기에 긴 CSS를 넣었음. 지금은 기본 Streamlit 테마만 사용."""
-    # [고급 · 주석 처리] 전역 CSS 주입 — 폰트·사이드바 그라데이션·카드 그림자 등
-    # st.markdown("""<style>...</style>""", unsafe_allow_html=True)
-    return
+    """사이드바·배경 색감만 조정 (본문 차트·표 레이아웃은 건드리지 않음)."""
+    st.markdown(
+        """
+        <style>
+        /* 메인 영역: 은은한 슬레이트 배경 */
+        [data-testid="stAppViewContainer"] {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        [data-testid="stMain"] {
+            background: transparent;
+        }
+
+        /* 사이드바: 틸 톤 그라데이션 */
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #f0fdfa 0%, #ecfeff 38%, #f8fafc 100%);
+            border-right: 1px solid #cbd5e1;
+        }
+        section[data-testid="stSidebar"] > div:first-child {
+            background: transparent;
+        }
+
+        /* 페이지 네비 링크 */
+        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
+            padding-top: 0.35rem;
+        }
+        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
+            border-radius: 0.65rem;
+            margin: 0.1rem 0;
+        }
+        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
+            background: rgba(15, 118, 110, 0.08);
+        }
+        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {
+            background: rgba(15, 118, 110, 0.14);
+            color: #0f766e;
+            font-weight: 600;
+        }
+
+        /* 로고 아래 여백 */
+        section[data-testid="stSidebar"] [data-testid="stLogo"] {
+            margin-bottom: 0.15rem;
+        }
+
+        .ev-sidebar-spacer {
+            height: 0.35rem;
+        }
+
+        /* 안내 패널 카드 */
+        .ev-sidebar-panel {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #0f766e;
+            border-radius: 0.75rem;
+            padding: 0.7rem 0.85rem;
+            margin-bottom: 0.65rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .ev-sidebar-panel-muted {
+            border-left-color: #0891b2;
+            background: rgba(255, 255, 255, 0.72);
+        }
+        .ev-sidebar-panel-title {
+            color: #0f766e;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+        .ev-sidebar-list {
+            margin: 0;
+            padding-left: 1.05rem;
+            color: #334155;
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+        .ev-sidebar-list li {
+            margin-bottom: 0.28rem;
+        }
+        .ev-sidebar-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 사이드바 하단 page_link */
+        section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
+            border-radius: 0.65rem;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid #e2e8f0;
+            margin-top: 0.25rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def format_value(value, metric):

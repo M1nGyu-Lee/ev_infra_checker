@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-inject_app_styles()  # 지금은 비어 있음(기본 테마 사용)
+inject_app_styles()
 render_sidebar()
 
 st.title("공공 급속충전 인프라 분석")
