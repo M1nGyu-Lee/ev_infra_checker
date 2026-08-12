@@ -13,7 +13,6 @@ def inject_app_styles():
     st.markdown(
         """
         <style>
-        /* 메인 영역: 은은한 슬레이트 배경 */
         [data-testid="stAppViewContainer"] {
             background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
         }
@@ -21,7 +20,6 @@ def inject_app_styles():
             background: transparent;
         }
 
-        /* 사이드바: 틸 톤 그라데이션 */
         section[data-testid="stSidebar"] {
             background: linear-gradient(180deg, #f0fdfa 0%, #ecfeff 38%, #f8fafc 100%);
             border-right: 1px solid #cbd5e1;
@@ -30,44 +28,6 @@ def inject_app_styles():
             background: transparent;
         }
 
-        /* 브랜드 → 페이지 네비 → 안내 패널 순서 */
-        section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-            display: flex;
-            flex-direction: column;
-        }
-        section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
-            display: contents;
-        }
-        .ev-sidebar-brand {
-            order: 1;
-            margin: 0.15rem 0 0.55rem;
-            padding: 0.95rem 1rem;
-            border-radius: 0.85rem;
-            background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
-            box-shadow: 0 2px 8px rgba(15, 118, 110, 0.22);
-        }
-        .ev-sidebar-brand-title {
-            color: #ffffff;
-            font-size: 1.12rem;
-            font-weight: 700;
-            line-height: 1.25;
-        }
-        .ev-sidebar-brand-tagline {
-            color: #ccfbf1;
-            font-size: 0.82rem;
-            margin-top: 0.3rem;
-            line-height: 1.35;
-        }
-        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
-            order: 2;
-            padding-top: 0.15rem;
-            padding-bottom: 0.35rem;
-        }
-        .ev-sidebar-panels {
-            order: 3;
-        }
-
-        /* 페이지 네비 링크 */
         section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
             border-radius: 0.65rem;
             margin: 0.1rem 0;
@@ -81,48 +41,14 @@ def inject_app_styles():
             font-weight: 600;
         }
 
-        /* 안내 패널 카드 */
-        .ev-sidebar-panel {
-            background: rgba(255, 255, 255, 0.82);
-            border: 1px solid #e2e8f0;
-            border-left: 3px solid #0f766e;
-            border-radius: 0.75rem;
-            padding: 0.7rem 0.85rem;
-            margin-bottom: 0.65rem;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        section[data-testid="stSidebar"] [data-testid="stLogo"] {
+            margin-bottom: 0.35rem;
         }
-        .ev-sidebar-panel-muted {
-            border-left-color: #0891b2;
-            background: rgba(255, 255, 255, 0.72);
-        }
-        .ev-sidebar-panel-title {
-            color: #0f766e;
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            margin-bottom: 0.45rem;
-        }
-        .ev-sidebar-list {
-            margin: 0;
-            padding-left: 1.05rem;
-            color: #334155;
-            font-size: 0.84rem;
-            line-height: 1.45;
-        }
-        .ev-sidebar-list li {
-            margin-bottom: 0.28rem;
-        }
-        .ev-sidebar-list li:last-child {
-            margin-bottom: 0;
-        }
-
-        /* 사이드바 하단 page_link */
         section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
             border-radius: 0.65rem;
             background: rgba(255, 255, 255, 0.75);
             border: 1px solid #e2e8f0;
-            margin-top: 0.25rem;
+            margin-top: 0.35rem;
         }
         </style>
         """,
