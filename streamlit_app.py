@@ -20,7 +20,7 @@ st.markdown(
     <div class="ev-hero">
       <h1>공공 급속충전 인프라 분석</h1>
       <p>환경부 공공급속 · 국토부 EV · 차지인포 급·완속을 시·도·권역으로 비교하는 대시보드입니다.
-      왼쪽 메뉴에서 화면을 고른 뒤, 연도·스냅샷·시·도 필터를 먼저 맞추세요.</p>
+      <strong>발표·정책 브리핑</strong>에서 스토리를 본 뒤, 필요하면 탐색 화면으로 들어가세요.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -31,9 +31,9 @@ with c1:
     st.markdown(
         """
         <div class="ev-home-card">
-          <div class="rank">1순위 · 대국민</div>
-          <h3>시·도 지도</h3>
-          <p>이용·공급 부담을 지도와 순위로 한눈에 비교합니다.</p>
+          <div class="rank">1순위 · 정책</div>
+          <h3>발표·정책 브리핑</h3>
+          <p>결론 → 정의 → 전국 신호 → 지역 후보 → 주의사항 순으로 읽습니다.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -42,9 +42,9 @@ with c2:
     st.markdown(
         """
         <div class="ev-home-card">
-          <div class="rank">1순위 · 대국민</div>
-          <h3>급속 이용 추이</h3>
-          <p>전국·시·도 월별 충전량·활성기 변화를 봅니다.</p>
+          <div class="rank">탐색</div>
+          <h3>지도 · 추이 · 지역</h3>
+          <p>필터로 시·도·연도를 바꿔 가며 자세히 비교합니다.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -73,7 +73,16 @@ with c4:
     )
 
 st.markdown("")
+try:
+    st.page_link(
+        "pages/00_발표_브리핑.py",
+        label="발표·정책 브리핑으로 이동",
+        icon=":material/campaign:",
+    )
+except Exception:
+    st.caption("왼쪽 메뉴에서 「발표·정책 브리핑」을 선택하세요.")
+
 st.caption(
-    "분석 단위는 시·도×연·월 집계입니다. 상대 비교이며 절대 부족 판정이 아닙니다. "
+    "분석 단위는 시·도×연·월 집계입니다. 상대 비교이며 절대 부족·예산액 판정이 아닙니다. "
     "2025년 충전량은 1–8월(YTD) 기준으로 읽으세요."
 )

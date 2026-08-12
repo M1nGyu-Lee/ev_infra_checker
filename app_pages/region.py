@@ -28,7 +28,8 @@ from charger_dashboard.ui import (
 def render():
     priority_banner(
         1,
-        "우리 지역의 공공급속 **이용·피크**를 자세히 보는 화면입니다.",
+        "우리 지역의 공공급속 **이용·피크**를 자세히 보는 **탐색** 화면입니다. "
+        "발표 본편은 **발표·정책 브리핑**을 먼저 보세요.",
     )
 
     master = load_master()
@@ -45,52 +46,52 @@ def render():
     scope_notice()
     data_status_notice(year)
 
-    current_rows = master[(master["연도"] == year) & (master["시도"] == region)]
+    current_rows = master[(master["year"] == year) & (master["sido_short"] == region)]
     if current_rows.empty:
         st.warning(f"{year}년 {region} 데이터가 없습니다.")
         st.stop()
     current = current_rows.iloc[0]
     previous_rows = master[
-        (master["연도"] == year - 1) & (master["시도"] == region)
+        (master["year"] == year - 1) & (master["sido_short"] == region)
     ]
     previous = previous_rows.iloc[0] if not previous_rows.empty else pd.Series()
-    allow_annual_delta = current["기간상태"] == "complete"
+    allow_annual_delta = current["data_status"] == "complete"
 
-    status_badge(str(current["기간상태"]), current["관측월수"])
-    status_badge(str(current["설비상태"]))
+    status_badge(str(current["data_status"]), current["month_count"])
+    status_badge(str(current["charger_stock_status"]))
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         metric_card(
-            "전기차등록대수",
-            current["전기차등록대수"],
-            percent_change(current["전기차등록대수"], previous.get("전기차등록대수")),
+            "ev_count",
+            current["ev_count"],
+            percent_change(current["ev_count"], previous.get("ev_count")),
         )
     with c2:
         metric_card(
-            "활성충전기수",
-            current["활성충전기수"],
+            "active_charger_count",
+            current["active_charger_count"],
             percent_change(
-                current["활성충전기수"],
-                previous.get("활성충전기수") if allow_annual_delta else pd.NA,
+                current["active_charger_count"],
+                previous.get("active_charger_count") if allow_annual_delta else pd.NA,
             ),
         )
     with c3:
         metric_card(
-            "충전량_kWh",
-            current["충전량_kWh"],
+            "charge_kwh_sum",
+            current["charge_kwh_sum"],
             percent_change(
-                current["충전량_kWh"],
-                previous.get("충전량_kWh") if allow_annual_delta else pd.NA,
+                current["charge_kwh_sum"],
+                previous.get("charge_kwh_sum") if allow_annual_delta else pd.NA,
             ),
         )
     with c4:
         metric_card(
-            "활성기당충전량",
-            current["활성기당충전량"],
+            "kwh_per_active_charger",
+            current["kwh_per_active_charger"],
             percent_change(
-                current["활성기당충전량"],
-                previous.get("활성기당충전량") if allow_annual_delta else pd.NA,
+                current["kwh_per_active_charger"],
+                previous.get("kwh_per_active_charger") if allow_annual_delta else pd.NA,
             ),
         )
 
@@ -101,35 +102,35 @@ def render():
             f"{region}의 연도별 부담을 세 지표로 한눈에 봅니다. "
             "클릭 전환 없이 나란히 비교하세요."
         )
-        region_year = master[master["시도"] == region].dropna(
-            subset=["활성충전기수"]
+        region_year = master[master["sido_short"] == region].dropna(
+            subset=["active_charger_count"]
         )
         annual_metrics = [
-            "활성기당충전량",
-            "EV천대당활성급속",
-            "충전량_kWh",
+            "kwh_per_active_charger",
+            "fast_per_1000_ev_active",
+            "charge_kwh_sum",
         ]
         cols = st.columns(3)
         for col, metric in zip(cols, annual_metrics, strict=True):
             meta = METRIC_META[metric]
             with col, st.container(border=True):
                 st.markdown(f"**{meta['label']}**")
-                plot = region_year.dropna(subset=[metric]).set_index("연도")[[metric]]
+                plot = region_year.dropna(subset=[metric]).set_index("year")[[metric]]
                 plot = plot.rename(columns={metric: meta["label"]})
                 # [고급] Altair mark_line → st.line_chart
                 st.line_chart(plot)
                 st.caption(meta["help"])
 
     with tabs[1]:
-        region_monthly = panel[panel["시도"] == region].copy()
-        region_charge = charge_annual[charge_annual["시도"] == region].copy()
-        peak_rows = region_charge.dropna(subset=["평균초과율", "피크월"])
+        region_monthly = panel[panel["sido_short"] == region].copy()
+        region_charge = charge_annual[charge_annual["sido_short"] == region].copy()
+        peak_rows = region_charge.dropna(subset=["peak_above_avg_pct", "peak_month"])
 
         if not peak_rows.empty:
-            latest_peak = peak_rows.sort_values("연도").iloc[-1]
-            peak_pct = float(latest_peak["평균초과율"])
-            peak_month = int(latest_peak["피크월"])
-            peak_year = int(latest_peak["연도"])
+            latest_peak = peak_rows.sort_values("year").iloc[-1]
+            peak_pct = float(latest_peak["peak_above_avg_pct"])
+            peak_month = int(latest_peak["peak_month"])
+            peak_year = int(latest_peak["year"])
             if peak_pct >= 40:
                 peak_msg = (
                     f"{region} **{peak_year}년** 피크는 **{peak_month}월**이고, "
@@ -155,17 +156,17 @@ def render():
         with left, st.container(border=True):
             st.markdown("**월별 공공급속 충전량**")
             # [고급] Altair 피크 점·라벨 레이어 → 선만 + 아래 표로 피크월 표시
-            month_line = region_monthly.set_index("date")[["충전량_kWh"]].rename(
-                columns={"충전량_kWh": "충전량 (kWh)"}
+            month_line = region_monthly.set_index("date")[["charge_kwh_sum"]].rename(
+                columns={"charge_kwh_sum": "충전량 (kWh)"}
             )
             st.line_chart(month_line)
             if not peak_rows.empty:
-                peak_list = peak_rows[["연도", "피크월", "피크충전량", "평균초과율"]].rename(
+                peak_list = peak_rows[["year", "peak_month", "peak_kwh", "peak_above_avg_pct"]].rename(
                     columns={
-                        "연도": "연도",
-                        "피크월": "피크월",
-                        "피크충전량": "피크 kWh",
-                        "평균초과율": "평균 대비 초과(%)",
+                        "year": "연도",
+                        "peak_month": "피크월",
+                        "peak_kwh": "피크 kWh",
+                        "peak_above_avg_pct": "평균 대비 초과(%)",
                     }
                 )
                 st.caption("연도별 피크월 (빨간 점 대신 표로 표시)")
@@ -176,8 +177,8 @@ def render():
             if peak_rows.empty:
                 st.info("피크 집계가 없습니다.")
             else:
-                peak_bar = peak_rows.set_index("연도")[["평균초과율"]].rename(
-                    columns={"평균초과율": "월평균 대비 초과 (%)"}
+                peak_bar = peak_rows.set_index("year")[["peak_above_avg_pct"]].rename(
+                    columns={"peak_above_avg_pct": "월평균 대비 초과 (%)"}
                 )
                 st.plotly_chart(
                     category_bar_chart(peak_bar),
@@ -187,8 +188,8 @@ def render():
                 st.caption("막대=피크월 충전량이 월평균보다 얼마나 높은지")
 
         if not peak_rows.empty:
-            avg_excess = float(peak_rows["평균초과율"].mean())
-            common_month = int(peak_rows["피크월"].mode().iloc[0])
+            avg_excess = float(peak_rows["peak_above_avg_pct"].mean())
+            common_month = int(peak_rows["peak_month"].mode().iloc[0])
             insight_callout(
                 "피크 조사 인사이트",
                 f"{region}은 관측 기간 평균 피크 초과율이 약 **{avg_excess:.0f}%**이고, "
@@ -197,21 +198,21 @@ def render():
             )
 
     with tabs[2]:
-        raw = panel[panel["시도"] == region].sort_values("기준월", ascending=False)
+        raw = panel[panel["sido_short"] == region].sort_values("year_month", ascending=False)
         st.dataframe(
             raw.drop(columns=["date"]),
             hide_index=True,
             column_config={
-                "기준월": st.column_config.TextColumn("기준월", pinned=True),
-                "시도": None,
-                "전기차등록대수": st.column_config.NumberColumn("EV", format="localized"),
-                "충전량_kWh": st.column_config.NumberColumn("충전량", format="%.2f"),
-                "충전횟수": st.column_config.NumberColumn("충전횟수", format="localized"),
-                "충전시간_h": st.column_config.NumberColumn("충전시간", format="%.2f"),
-                "활성충전기수": st.column_config.NumberColumn("활성기", format="localized"),
-                "EV당충전량": st.column_config.NumberColumn("EV당 kWh", format="%.2f"),
-                "EV당충전횟수": st.column_config.NumberColumn("EV당 횟수", format="%.2f"),
-                "활성기당충전량": st.column_config.NumberColumn(
+                "year_month": st.column_config.TextColumn("기준월", pinned=True),
+                "sido_short": None,
+                "ev_count": st.column_config.NumberColumn("EV", format="localized"),
+                "charge_kwh_sum": st.column_config.NumberColumn("충전량", format="%.2f"),
+                "charge_count_sum": st.column_config.NumberColumn("충전횟수", format="localized"),
+                "charge_hours_sum": st.column_config.NumberColumn("충전시간", format="%.2f"),
+                "active_charger_count": st.column_config.NumberColumn("활성기", format="localized"),
+                "kwh_per_ev": st.column_config.NumberColumn("EV당 kWh", format="%.2f"),
+                "sessions_per_ev": st.column_config.NumberColumn("EV당 횟수", format="%.2f"),
+                "kwh_per_active_charger": st.column_config.NumberColumn(
                     "활성기당 kWh", format="%.2f"
                 ),
             },

@@ -1,4 +1,4 @@
-"""1순위 · 지역 상세."""
+"""탐색 · 지역 상세."""
 
 import streamlit as st
 

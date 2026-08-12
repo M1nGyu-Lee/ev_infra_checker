@@ -19,7 +19,8 @@ from charger_dashboard.ui import (
 def render():
     priority_banner(
         1,
-        "환경부 **공공급속** 이용이 어떻게 바뀌었는지, 한 화면에서 읽는 대국민용 추이입니다.",
+        "환경부 **공공급속** 이용 변화를 필터로 깊게 보는 **탐색** 화면입니다. "
+        "발표 본편은 **발표·정책 브리핑**을 먼저 보세요.",
     )
     scope_notice()
 
@@ -27,10 +28,10 @@ def render():
     nat = load_national_charge_ev_monthly()
     nat_complete = nat[nat["date"].dt.year <= 2024]
     if len(nat_complete) >= 24:
-        y2023 = nat_complete.loc[nat_complete["date"].dt.year == 2023, "충전량_kWh"].sum()
-        y2024 = nat_complete.loc[nat_complete["date"].dt.year == 2024, "충전량_kWh"].sum()
-        ev2023 = nat_complete.loc[nat_complete["date"].dt.year == 2023, "전기차등록대수"].iloc[-1]
-        ev2024 = nat_complete.loc[nat_complete["date"].dt.year == 2024, "전기차등록대수"].iloc[-1]
+        y2023 = nat_complete.loc[nat_complete["date"].dt.year == 2023, "charge_kwh_sum"].sum()
+        y2024 = nat_complete.loc[nat_complete["date"].dt.year == 2024, "charge_kwh_sum"].sum()
+        ev2023 = nat_complete.loc[nat_complete["date"].dt.year == 2023, "ev_count"].iloc[-1]
+        ev2024 = nat_complete.loc[nat_complete["date"].dt.year == 2024, "ev_count"].iloc[-1]
         if y2023 > 0 and ev2023 > 0:
             charge_chg = (y2024 / y2023 - 1) * 100
             ev_chg = (ev2024 / ev2023 - 1) * 100
@@ -47,10 +48,10 @@ def render():
     # [고급] Altair 이중축(layer + resolve_scale) → 선 차트 두 개로 분리
     nat_plot = nat.set_index("date")
     st.caption("전기차 등록대수")
-    st.line_chart(nat_plot[["전기차등록대수"]].rename(columns={"전기차등록대수": "전기차 (대)"}))
+    st.line_chart(nat_plot[["ev_count"]].rename(columns={"ev_count": "전기차 (대)"}))
     st.caption("공공급속 충전량 (kWh) — 축이 달라서 아래 따로 그립니다")
     st.line_chart(
-        nat_plot[["충전량_kWh"]].rename(columns={"충전량_kWh": "충전량 (kWh)"})
+        nat_plot[["charge_kwh_sum"]].rename(columns={"charge_kwh_sum": "충전량 (kWh)"})
     )
     st.caption("2025년은 1월부터 8월까지만 있습니다.")
 
@@ -75,26 +76,26 @@ def render():
         st.stop()
 
     panel_filtered = panel_all[
-        panel_all["시도"].isin(selected_regions)
-        & panel_all["연도"].between(min_year, min(max_year, 2025))
+        panel_all["sido_short"].isin(selected_regions)
+        & panel_all["year"].between(min_year, min(max_year, 2025))
     ]
 
     st.subheader("시·도별 공공급속 이용 추이")
     selected_metric = st.segmented_control(
         "표시지표",
-        options=["충전량_kWh", "활성기당충전량"],
+        options=["charge_kwh_sum", "kwh_per_active_charger"],
         format_func=lambda metric: METRIC_META[metric]["label"],
-        default="충전량_kWh",
+        default="charge_kwh_sum",
         key="trend_charge_metric",
     )
     if selected_metric is None:
-        selected_metric = "충전량_kWh"
+        selected_metric = "charge_kwh_sum"
     meta = METRIC_META[selected_metric]
 
     # 날짜 × 시·도 표로 피벗 → st.line_chart가 시·도마다 선 하나
     pivot = panel_filtered.pivot_table(
         index="date",
-        columns="시도",
+        columns="sido_short",
         values=selected_metric,
         aggfunc="mean",
     )
@@ -102,29 +103,29 @@ def render():
     st.caption(meta["help"])
 
     detail_columns = [
-        "기준월",
-        "시도",
-        "전기차등록대수",
-        "충전량_kWh",
-        "활성충전기수",
-        "EV당충전량",
-        "활성기당충전량",
+        "year_month",
+        "sido_short",
+        "ev_count",
+        "charge_kwh_sum",
+        "active_charger_count",
+        "kwh_per_ev",
+        "kwh_per_active_charger",
     ]
     with st.expander("월별 상세 데이터"):
         detail = panel_filtered[detail_columns].sort_values(
-            ["기준월", "시도"], ascending=[False, True]
+            ["year_month", "sido_short"], ascending=[False, True]
         )
         st.dataframe(
             detail,
             hide_index=True,
             column_config={
-                "기준월": st.column_config.TextColumn("기준월", pinned=True),
-                "시도": st.column_config.TextColumn("시·도", pinned=True),
-                "전기차등록대수": st.column_config.NumberColumn("EV", format="localized"),
-                "충전량_kWh": st.column_config.NumberColumn("충전량", format="%.2f"),
-                "활성충전기수": st.column_config.NumberColumn("활성기", format="localized"),
-                "EV당충전량": st.column_config.NumberColumn("EV당 kWh", format="%.2f"),
-                "활성기당충전량": st.column_config.NumberColumn(
+                "year_month": st.column_config.TextColumn("기준월", pinned=True),
+                "sido_short": st.column_config.TextColumn("시·도", pinned=True),
+                "ev_count": st.column_config.NumberColumn("EV", format="localized"),
+                "charge_kwh_sum": st.column_config.NumberColumn("충전량", format="%.2f"),
+                "active_charger_count": st.column_config.NumberColumn("활성기", format="localized"),
+                "kwh_per_ev": st.column_config.NumberColumn("EV당 kWh", format="%.2f"),
+                "kwh_per_active_charger": st.column_config.NumberColumn(
                     "활성기당 kWh", format="%.2f"
                 ),
             },

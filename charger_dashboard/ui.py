@@ -309,7 +309,7 @@ def metric_card(metric, value, delta=None, chart_data=None):
 def priority_banner(priority, description):
     """발표 순위를 한 줄로 표시."""
     labels = {
-        1: "1순위 · 대국민 홍보",
+        1: "1순위 · 정책 결정",
         2: "2순위 · 급·완속 사업자",
         3: "3순위 · 전국 기초 총량",
     }

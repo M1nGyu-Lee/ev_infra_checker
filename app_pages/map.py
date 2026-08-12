@@ -30,7 +30,8 @@ from charger_dashboard.ui import (
 def render():
     priority_banner(
         1,
-        "시·도별 **환경부 공공급속** 부담을 지도로 비교하는 대국민용 화면입니다.",
+        "시·도별 **환경부 공공급속** 부담을 지도로 비교하는 **탐색** 화면입니다. "
+        "발표 본편은 **발표·정책 브리핑**을 먼저 보세요.",
     )
 
     master = load_master()
@@ -40,9 +41,9 @@ def render():
     data_status_notice(year)
 
     if year <= 2022:
-        metric_options = ["활성기당충전량", "EV천대당설치급속"]
+        metric_options = ["kwh_per_active_charger", "fast_per_1000_ev_stock"]
     elif year <= 2025:
-        metric_options = ["활성기당충전량", "EV천대당활성급속"]
+        metric_options = ["kwh_per_active_charger", "fast_per_1000_ev_active"]
     else:
         st.info("2026년은 환경부 공공급속 이용 지표가 없어 지도를 표시하지 않습니다.")
         st.stop()
@@ -116,7 +117,7 @@ def render():
         value_txt = format_value(row[metric], metric)
         if show_burden:
             band = str(row["burden_band"])
-            if metric == "활성기당충전량":
+            if metric == "kwh_per_active_charger":
                 note = {
                     "높음": "활성기 대비 이용이 몰리는 편",
                     "다소 높음": "이용 부담이 평균보다 큰 편",
