@@ -67,21 +67,22 @@ def _priority_table(master: pd.DataFrame, year: int) -> tuple[pd.DataFrame, list
     if m.empty:
         return pd.DataFrame(), []
 
-    burden_cut = m[c_burden].median()
-    supply_cut = m[c_supply].median()
+    # 상위/하위 25%만 ‘뚜렷한’ 신호로 사용 (중앙값이면 후보가 너무 많아짐)
+    burden_cut = m[c_burden].quantile(0.75)
+    supply_cut = m[c_supply].quantile(0.25)
 
     rows = []
     for _, r in m.iterrows():
         high_burden = r[c_burden] >= burden_cut
         low_supply = r[c_supply] <= supply_cut
         if high_burden and low_supply:
-            why = "이용 부담↑ · EV대비 활성기↓"
+            why = "이용 부담 상위 · EV대비 활성기 하위"
             priority = 1
         elif high_burden:
-            why = "이용 부담이 중앙값 이상"
+            why = "이용 부담 상위 25%"
             priority = 2
         elif low_supply:
-            why = "EV 대비 활성기가 중앙값 이하"
+            why = "EV 대비 활성기 하위 25%"
             priority = 3
         else:
             continue
@@ -101,7 +102,7 @@ def _priority_table(master: pd.DataFrame, year: int) -> tuple[pd.DataFrame, list
         return table, []
     table = table.sort_values(
         ["우선", "활성기당 충전량"], ascending=[True, False]
-    ).head(7)
+    ).head(5)
     overlap = table.loc[table["우선"] == 1, "시·도"].tolist()
     return table, overlap
 
@@ -195,7 +196,7 @@ def render():
     st.caption(
         "지표: **활성기당 충전량**(높을수록 기기당 이용 부담↑) · "
         "**EV천대당 활성기**(낮을수록 EV 대비 여력↓). "
-        "중앙값 기준으로 ‘부담↑·여력↓’가 겹치면 1순위 후보입니다. 설치 확정이 아닙니다."
+        "부담 상위 25% · 여력 하위 25%가 겹치면 ● 1순위 후보입니다. 설치 확정이 아닙니다."
     )
 
     table, overlap = _priority_table(master, 2024)
