@@ -160,16 +160,18 @@ def category_bar_chart(df, *, height=None):
     n = len(plot_df)
     if height is None:
         height = max(300, 80 + 24 * n)
-    fig = px.bar(plot_df, x=x_col, y=y_col)
+    fig = px.bar(
+        plot_df,
+        x=x_col,
+        y=y_col,
+        color_discrete_sequence=[COLORS["charge"]],
+    )
     fig.update_layout(
-        xaxis_tickangle=0,
-        xaxis_type="category",
         showlegend=False,
         height=height,
         margin=dict(l=48, r=16, t=12, b=72),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        color_discrete_sequence=[COLORS["charge"]],
     )
-    fig.update_xaxes(tickfont=dict(size=12))
+    fig.update_xaxes(tickangle=0, type="category", tickfont=dict(size=12))
     return fig
