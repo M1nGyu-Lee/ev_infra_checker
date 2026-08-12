@@ -11,14 +11,23 @@ from charger_dashboard.data import (
 from charger_dashboard.ui import insight_callout, priority_banner, scope_notice
 
 
+def _col(df: pd.DataFrame, *names: str) -> str:
+    """영문(분석 원본) / 한글(share_package) 컬럼명 중 있는 것을 고른다."""
+    for name in names:
+        if name in df.columns:
+            return name
+    raise KeyError(f"컬럼 없음: {names} / 실제={list(df.columns)}")
+
+
 def _ytd_national(ytd: pd.DataFrame) -> dict:
     """시·도 YTD 표를 전국 합으로 요약."""
-    kwh_2024 = float(ytd["charge_kwh_2024_ytd"].sum())
-    kwh_2025 = float(ytd["charge_kwh_2025_ytd"].sum())
-    ev_2024 = float(ytd["ev_count_2024_ytd_avg"].sum())
-    ev_2025 = float(ytd["ev_count_2025_ytd_avg"].sum())
-    active_2024 = float(ytd["active_charger_2024_ytd"].sum())
-    active_2025 = float(ytd["active_charger_2025_ytd"].sum())
+    kwh_2024 = float(ytd[_col(ytd, "charge_kwh_2024_ytd", "충전량_2024_YTD")].sum())
+    kwh_2025 = float(ytd[_col(ytd, "charge_kwh_2025_ytd", "충전량_2025_YTD")].sum())
+    ev_2024 = float(ytd[_col(ytd, "ev_count_2024_ytd_avg", "EV_2024_YTD평균")].sum())
+    ev_2025 = float(ytd[_col(ytd, "ev_count_2025_ytd_avg", "EV_2025_YTD평균")].sum())
+    active_2024 = float(ytd[_col(ytd, "active_charger_2024_ytd", "활성기_2024_YTD")].sum())
+    active_2025 = float(ytd[_col(ytd, "active_charger_2025_ytd", "활성기_2025_YTD")].sum())
+    months_col = _col(ytd, "months_compared", "비교월수")
     return {
         "kwh_2024": kwh_2024,
         "kwh_2025": kwh_2025,
@@ -29,7 +38,7 @@ def _ytd_national(ytd: pd.DataFrame) -> dict:
         "active_2024": active_2024,
         "active_2025": active_2025,
         "active_yoy": (active_2025 / active_2024 - 1) * 100 if active_2024 else float("nan"),
-        "months": int(ytd["months_compared"].iloc[0]) if len(ytd) else 8,
+        "months": int(ytd[months_col].iloc[0]) if len(ytd) else 8,
     }
 
 
@@ -45,6 +54,18 @@ def render():
     nat = load_national_charge_ev_monthly()
     ytd = load_ytd_compare()
     ytd_nat = _ytd_national(ytd)
+
+    # 스키마별 컬럼 별칭
+    c_year = _col(master, "year", "연도")
+    c_sido = _col(master, "sido_short", "시도")
+    c_status = _col(master, "data_status", "기간상태")
+    c_burden = _col(master, "kwh_per_active_charger", "활성기당충전량")
+    c_supply = _col(master, "fast_per_1000_ev_active", "EV천대당활성급속")
+    c_ev = _col(master, "ev_count", "전기차등록대수")
+    c_nat_ev = _col(nat, "ev_count", "전기차등록대수")
+    c_nat_kwh = _col(nat, "charge_kwh_sum", "충전량_kWh")
+    c_ytd_sido = _col(ytd, "sido_short", "시도")
+    c_ytd_yoy = _col(ytd, "charge_kwh_ytd_yoy_pct", "충전량_YTD증감률")
 
     # ----- 1. 한 줄 결론 -----
     st.markdown("### 1. 한 줄 결론")
@@ -116,7 +137,6 @@ def render():
             border=True,
         )
 
-    # 증감률 막대 (배운 st.bar_chart만 사용)
     yoy_frame = pd.DataFrame(
         {
             "증감률(%)": [
@@ -143,12 +163,10 @@ def render():
     left, right = st.columns(2)
     with left:
         st.caption("전기차 등록대수")
-        st.line_chart(nat_plot[["ev_count"]].rename(columns={"ev_count": "전기차 (대)"}))
+        st.line_chart(nat_plot[[c_nat_ev]].rename(columns={c_nat_ev: "전기차 (대)"}))
     with right:
         st.caption("환경부 공공급속 충전량")
-        st.line_chart(
-            nat_plot[["charge_kwh_sum"]].rename(columns={"charge_kwh_sum": "충전량 (kWh)"})
-        )
+        st.line_chart(nat_plot[[c_nat_kwh]].rename(columns={c_nat_kwh: "충전량 (kWh)"}))
     st.caption("2025년 충전량은 1–8월까지만 있습니다.")
 
     st.divider()
@@ -156,8 +174,8 @@ def render():
     # ----- 4. 지역 우선 점검 후보 -----
     st.markdown("### 4. 지역 우선 점검 후보 — 부담이 전국 균등한가?")
     year = 2024
-    m24 = master[(master["year"] == year) & (master["data_status"] == "complete")].copy()
-    m24 = m24.dropna(subset=["kwh_per_active_charger", "fast_per_1000_ev_active"])
+    m24 = master[(master[c_year] == year) & (master[c_status] == "complete")].copy()
+    m24 = m24.dropna(subset=[c_burden, c_supply])
 
     st.caption(
         f"{year}년(완전연도) 기준. "
@@ -165,21 +183,18 @@ def render():
         "설치 확정이 아니라 **우선 점검 후보**입니다."
     )
 
-    top = m24.nlargest(5, "kwh_per_active_charger")[
-        ["sido_short", "kwh_per_active_charger", "fast_per_1000_ev_active", "ev_count"]
-    ].copy()
+    top = m24.nlargest(5, c_burden)[[c_sido, c_burden, c_supply, c_ev]].copy()
     top = top.rename(
         columns={
-            "sido_short": "시·도",
-            "kwh_per_active_charger": "활성기당 충전량",
-            "fast_per_1000_ev_active": "EV천대당 활성기",
-            "ev_count": "EV 등록",
+            c_sido: "시·도",
+            c_burden: "활성기당 충전량",
+            c_supply: "EV천대당 활성기",
+            c_ev: "EV 등록",
         }
     )
 
-    bar = top.set_index("시·도")[["활성기당 충전량"]]
     st.markdown("**활성기당 충전량 상위 5개 시·도**")
-    st.bar_chart(bar)
+    st.bar_chart(top.set_index("시·도")[["활성기당 충전량"]])
 
     st.dataframe(
         top,
@@ -192,10 +207,7 @@ def render():
         },
     )
 
-    # 여력도 낮은 곳이 겹치면 강조
-    low_supply = set(
-        m24.nsmallest(5, "fast_per_1000_ev_active")["sido_short"].tolist()
-    )
+    low_supply = set(m24.nsmallest(5, c_supply)[c_sido].tolist())
     high_burden = set(top["시·도"].tolist())
     overlap = sorted(high_burden & low_supply)
     if overlap:
@@ -214,17 +226,16 @@ def render():
             "현장 점검·차등 검토 후보를 고르는 편이 안전합니다.",
         )
 
-    # 충전량 YTD 증감 양극 (짧게)
-    ytd_sorted = ytd.sort_values("charge_kwh_ytd_yoy_pct", ascending=False)
-    up = ytd_sorted.head(3)[["sido_short", "charge_kwh_ytd_yoy_pct"]]
-    down = ytd_sorted.tail(3)[["sido_short", "charge_kwh_ytd_yoy_pct"]]
+    ytd_sorted = ytd.sort_values(c_ytd_yoy, ascending=False)
+    up = ytd_sorted.head(3)[[c_ytd_sido, c_ytd_yoy]]
+    down = ytd_sorted.tail(3)[[c_ytd_sido, c_ytd_yoy]]
     c_up, c_down = st.columns(2)
     with c_up:
         st.markdown("**공공급속 충전량 YTD 증가 상위**")
-        st.bar_chart(up.set_index("sido_short").rename(columns={"charge_kwh_ytd_yoy_pct": "%"}))
+        st.bar_chart(up.set_index(c_ytd_sido).rename(columns={c_ytd_yoy: "%"}))
     with c_down:
         st.markdown("**공공급속 충전량 YTD 감소·하위**")
-        st.bar_chart(down.set_index("sido_short").rename(columns={"charge_kwh_ytd_yoy_pct": "%"}))
+        st.bar_chart(down.set_index(c_ytd_sido).rename(columns={c_ytd_yoy: "%"}))
     st.caption("전국 평균(+수 %)만 보면 지역 체감이 가려질 수 있습니다 → 차등 검토 근거.")
 
     st.divider()
