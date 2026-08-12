@@ -184,7 +184,7 @@ def render():
             else:
                 cur["fast_share_delta"] = pd.NA
 
-            left, right = st.columns(2)
+            left, right = st.columns([1, 2])
             with left, st.container(border=True):
                 st.markdown(f"**{selected_ref} 권역별 급속 비중**")
                 share_bar = cur.set_index("권역표시")[["급속비중"]].rename(
