@@ -7,5 +7,5 @@ from charger_dashboard.sidebar import render_sidebar
 
 render_sidebar()
 st.title("정책 우선순위 브리핑")
-st.caption("1순위 · 메인 대시보드")
+st.caption("늘려야 하나 → 어디에 먼저 → 종합")
 render()
