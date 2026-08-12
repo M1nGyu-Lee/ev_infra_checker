@@ -1,15 +1,20 @@
-"""정책 우선순위 브리핑 (1순위 메인).
+"""발표용 정책 브리핑.
 
 스토리:
-  1) EV·급속기·충전량 → “충전기(급속)를 더 늘려야 한다” 신호
-  2) 그럼 어디에 먼저? → 17시·도 지도(전체) + 8권역 보조
-  3) 마치며 → 종합 인사이트
+  1) EV·공공급속 이용이 어긋나는가 → 늘릴 필요는 있는가
+  2) 이용은 많은데 급속 여력·비중이 낮은 곳은 어디인가
+  3) 종합 결론
 """
 
 import pandas as pd
 import streamlit as st
 
-from charger_dashboard.charts import burden_bar_frame, category_bar_chart, choropleth
+from charger_dashboard.charts import (
+    burden_bar_frame,
+    category_bar_chart,
+    choropleth,
+    dual_axis_line,
+)
 from charger_dashboard.data import (
     METRIC_META,
     load_geojson,
@@ -18,24 +23,24 @@ from charger_dashboard.data import (
     load_ytd_compare,
     rank_for_map,
 )
-from charger_dashboard.ui import priority_banner
 
 
-def _col(df: pd.DataFrame, *names: str) -> str:
+def _col(df, *names):
     for name in names:
         if name in df.columns:
             return name
     raise KeyError(f"컬럼 없음: {names} / 실제={list(df.columns)}")
 
 
-def _pick_metric(*candidates: str) -> str:
+def _pick_metric(*candidates):
     for name in candidates:
         if name in METRIC_META:
             return name
     raise KeyError(f"METRIC_META에 없음: {candidates}")
 
 
-def _ytd_national(ytd: pd.DataFrame) -> dict:
+def _period_compare(ytd):
+    """같은 달 구간(1–N월) 전년 대비. YTD라는 말은 화면에 쓰지 않음."""
     kwh_2024 = float(ytd[_col(ytd, "charge_kwh_2024_ytd", "충전량_2024_YTD")].sum())
     kwh_2025 = float(ytd[_col(ytd, "charge_kwh_2025_ytd", "충전량_2025_YTD")].sum())
     ev_2024 = float(ytd[_col(ytd, "ev_count_2024_ytd_avg", "EV_2024_YTD평균")].sum())
@@ -43,280 +48,301 @@ def _ytd_national(ytd: pd.DataFrame) -> dict:
     active_2024 = float(ytd[_col(ytd, "active_charger_2024_ytd", "활성기_2024_YTD")].sum())
     active_2025 = float(ytd[_col(ytd, "active_charger_2025_ytd", "활성기_2025_YTD")].sum())
     months = int(ytd[_col(ytd, "months_compared", "비교월수")].iloc[0]) if len(ytd) else 8
-    ev_yoy = (ev_2025 / ev_2024 - 1) * 100 if ev_2024 else float("nan")
-    active_yoy = (active_2025 / active_2024 - 1) * 100 if active_2024 else float("nan")
-    kwh_yoy = (kwh_2025 / kwh_2024 - 1) * 100 if kwh_2024 else float("nan")
     return {
         "months": months,
-        "ev_yoy": ev_yoy,
-        "active_yoy": active_yoy,
-        "kwh_yoy": kwh_yoy,
+        "ev_yoy": (ev_2025 / ev_2024 - 1) * 100 if ev_2024 else float("nan"),
+        "active_yoy": (active_2025 / active_2024 - 1) * 100 if active_2024 else float("nan"),
+        "kwh_yoy": (kwh_2025 / kwh_2024 - 1) * 100 if kwh_2024 else float("nan"),
         "active_2025": active_2025,
         "kwh_2025": kwh_2025,
-        "ev_2025": ev_2025,
     }
 
 
-def _load_region8_latest():
-    """차지인포 8권역 최신 급속 관련 스냅샷 (없으면 None)."""
+def _fast_stock_snapshot():
+    """차지인포: 완속 제외하고 급속이 전체에서 차지하는 비중."""
     try:
-        from charger_dashboard.data import (
-            load_chargeinfo_ev_per_charger_wide,
-            load_chargeinfo_slow_fast_ratio_monthly,
-        )
+        from charger_dashboard.data import load_chargeinfo_slow_fast_ratio_monthly
 
-        wide = load_chargeinfo_ev_per_charger_wide()
-        slow_fast = load_chargeinfo_slow_fast_ratio_monthly()
+        sf = load_chargeinfo_slow_fast_ratio_monthly()
     except Exception:
         return None
 
-    # 컬럼 별칭
-    ym_w = _col(wide, "ref_ym", "기준월")
-    reg_w = _col(wide, "region_name", "권역")
-    fast_per = _col(wide, "fast_per_ev", "급속_대당")
+    ym = _col(sf, "ref_ym", "기준월")
+    reg = _col(sf, "region_name", "권역")
+    share = _col(sf, "fast_share_pct", "급속비중")
+    fast = _col(sf, "fast", "급속")
+    slow = _col(sf, "slow", "완속")
+    ratio = _col(sf, "slow_fast_ratio", "완속급속비")
 
-    ym_s = _col(slow_fast, "ref_ym", "기준월")
-    reg_s = _col(slow_fast, "region_name", "권역")
-    fast_n = _col(slow_fast, "fast", "급속")
+    latest = sf[ym].max()
+    snap = sf[sf[ym] == latest].copy()
+    nat = snap[snap[reg] == "전국"]
+    regions = snap[snap[reg] != "전국"].copy()
+    if nat.empty or regions.empty:
+        return None
 
-    latest_w = wide[ym_w].max()
-    latest_s = slow_fast[ym_s].max()
-    w = wide[wide[ym_w] == latest_w].copy()
-    s = slow_fast[slow_fast[ym_s] == latest_s].copy()
-    w = w[w[reg_w] != "전국"]
-    s = s[s[reg_s] != "전국"]
+    row = nat.iloc[0]
+    return {
+        "as_of": str(latest),
+        "fast_share": float(row[share]),
+        "slow_fast": float(row[ratio]),
+        "fast": float(row[fast]),
+        "slow": float(row[slow]),
+        "regions": regions.rename(
+            columns={reg: "권역", share: "급속 비중(%)", fast: "급속(기)", slow: "완속(기)"}
+        ),
+    }
 
-    merged = w[[reg_w, fast_per]].merge(
-        s[[reg_s, fast_n]], left_on=reg_w, right_on=reg_s, how="inner"
-    )
-    merged = merged.rename(
-        columns={reg_w: "권역", fast_per: "EV당 급속", fast_n: "급속 누적(기)"}
-    )
-    if "권역_y" in merged.columns:
-        merged = merged.drop(columns=["권역_y"], errors="ignore")
-    if reg_s in merged.columns and reg_s != "권역":
-        merged = merged.drop(columns=[reg_s], errors="ignore")
-    return merged, str(latest_w)
+
+def _sido_col(df):
+    for name in ("시도", "sido_short", "sido"):
+        if name in df.columns:
+            return name
+    raise KeyError("시·도 컬럼이 없습니다.")
+
+
+def _year_col(df):
+    for name in ("연도", "year"):
+        if name in df.columns:
+            return name
+    raise KeyError("연도 컬럼이 없습니다.")
 
 
 def render():
-    priority_banner(
-        1,
-        "**정책·예산 우선순위** · 환경부 공공급속 기준으로 “늘려야 하나 / 어디에 먼저”를 봅니다.",
-    )
-
     master = load_master()
-    nat = load_national_charge_ev_monthly()
-    ytd = load_ytd_compare()
-    y = _ytd_national(ytd)
+    nat = load_national_charge_ev_monthly().copy()
+    cmp = _period_compare(load_ytd_compare())
+    fast_stock = _fast_stock_snapshot()
 
-    c_nat_kwh = _col(nat, "charge_kwh_sum", "충전량_kWh")
+    if "date" not in nat.columns:
+        ym = _col(nat, "year_month", "기준월")
+        nat["date"] = pd.to_datetime(nat[ym], format="%Y-%m")
+    c_date = "date"
+    c_ev = _col(nat, "ev_count", "전기차등록대수")
+    c_kwh = _col(nat, "charge_kwh_sum", "충전량_kWh")
+
     burden_metric = _pick_metric("kwh_per_active_charger", "활성기당충전량")
+    volume_metric = _pick_metric("charge_kwh_sum", "충전량_kWh")
     supply_metric = _pick_metric("fast_per_1000_ev_active", "EV천대당활성급속")
 
-    # =====================================================================
-    # 1) 위: EV↑ · 급속기↑ · 실제 충전량 → 늘려야 한다
-    # =====================================================================
-    st.markdown("### 1. 전국 신호 — EV는 늘고, 급속은 따라가나?")
+    # ------------------------------------------------------------------
+    # 1) 전국 신호
+    # ------------------------------------------------------------------
+    st.markdown("### 1. 늘려야 하나 — EV와 공공급속 이용")
     st.caption(
-        f"비교: **2024년 1–{y['months']}월 vs 2025년 1–{y['months']}월** (같은 기간). "
-        "급속 충전기 대수 = 환경부 공공급속 **활성기**(그 기간 충전 실적이 있는 기기)."
+        f"비교 구간: 2024년 1–{cmp['months']}월 vs 2025년 1–{cmp['months']}월. "
+        "급속 = 환경부 공공급속 활성기(충전 실적 있는 기기)."
     )
 
     m1, m2, m3 = st.columns(3)
-    m1.metric(
-        "EV 등록 증가율",
-        f"{y['ev_yoy']:+.1f}%",
-        help="국토부 전기차 등록(잠재 수요)",
-        border=True,
-    )
-    m2.metric(
-        "급속 충전기(활성) 증가율",
-        f"{y['active_yoy']:+.1f}%",
-        help="환경부 공공급속 활성기 수 증가율",
-        border=True,
-    )
+    m1.metric("전기차 등록", f"{cmp['ev_yoy']:+.1f}%", border=True)
+    m2.metric("공공급속 활성기", f"{cmp['active_yoy']:+.1f}%", border=True)
     m3.metric(
-        "공공급속 충전량(YTD)",
-        f"{y['kwh_2025'] / 1e6:,.1f} GWh",
-        delta=f"{y['kwh_yoy']:+.1f}%",
-        help="환경부 공공급속망 실제 이용량",
+        "공공급속 충전량",
+        f"{cmp['kwh_yoy']:+.1f}%",
+        help=f"같은 기간 합계 약 {cmp['kwh_2025'] / 1e6:,.1f} GWh",
         border=True,
     )
 
-    g1, g2 = st.columns(2)
-    with g1:
-        st.markdown("**그래프 · 증가율 비교**")
-        st.caption("막대 = 전년 동기간 대비 증감률(%). EV만 크게 솟으면 공급·이용이 못 따라간 신호입니다.")
+    with st.container(border=True):
+        st.markdown("**전기차 등록 · 공공급속 충전량 (월별)**")
+        st.caption("왼쪽=전기차 등록대수, 오른쪽=환경부 공공급속 충전량(kWh). 간격이 벌어질수록 수요가 이용·공급을 앞선 신호입니다.")
+        dual_df = nat[[c_date, c_ev, c_kwh]].rename(
+            columns={c_ev: "전기차", c_kwh: "충전량"}
+        )
         st.plotly_chart(
-            category_bar_chart(
-                pd.DataFrame(
-                    {
-                        "증감률(%)": [y["ev_yoy"], y["active_yoy"], y["kwh_yoy"]],
-                    },
-                    index=["EV 등록", "급속 활성기", "공공급속 충전량"],
-                )
+            dual_axis_line(
+                dual_df,
+                c_date,
+                "전기차",
+                "충전량",
+                left_name="전기차 (대)",
+                right_name="공공급속 충전량 (kWh)",
+                height=460,
             ),
             use_container_width=True,
             config={"displayModeBar": False},
         )
-    with g2:
-        st.markdown("**그래프 · 실제 급속 충전량 추이**")
-        st.caption("선 = 전국 환경부 공공급속 월별 충전량(kWh). 이용이 실제로 얼마나 나갔는지 봅니다.")
-        nat_plot = nat.set_index("date")[[c_nat_kwh]].rename(columns={c_nat_kwh: "충전량 (kWh)"})
-        st.line_chart(nat_plot)
-        st.caption("참고: 2025년은 1–8월까지 관측.")
 
-    st.warning(
-        f"**인사이트 (위):** EV는 **{y['ev_yoy']:+.1f}%** 늘었는데 "
-        f"공공급속 활성기는 **{y['active_yoy']:+.1f}%**, 충전량은 **{y['kwh_yoy']:+.1f}%**입니다. "
-        f"수요 대비 급속 **용량·가동**이 부족해질 수 있어, "
-        f"**공공급속 확충(대수·입지·가동)** 을 검토할 근거가 됩니다. "
-        f"(현재 YTD 활성기 약 {y['active_2025']:,.0f}기 · 민간·완속 제외)",
+    if fast_stock is not None:
+        f1, f2, f3 = st.columns(3)
+        f1.metric(
+            "전국 급속 비중",
+            f"{fast_stock['fast_share']:.1f}%",
+            help="차지인포 전체 구축(공공+민간)에서 급속 비율",
+            border=True,
+        )
+        f2.metric("완속 : 급속", f"{fast_stock['slow_fast']:.1f} : 1", border=True)
+        f3.metric(
+            "급속 누적",
+            f"{fast_stock['fast']:,.0f}기",
+            help=f"기준 {fast_stock['as_of']} · 완속 제외 판단용",
+            border=True,
+        )
+        st.caption(
+            f"차지인포 기준(공공+민간) 급속은 전체의 약 **{fast_stock['fast_share']:.0f}%**뿐입니다. "
+            "완속은 판단에서 빼고, **급속 비중**으로 보면 급속 확충 논의가 더 분명해집니다."
+        )
+
+    st.info(
+        f"**인사이트:** 전기차는 **{cmp['ev_yoy']:+.1f}%** 늘었는데 "
+        f"공공급속 활성기는 **{cmp['active_yoy']:+.1f}%**, 충전량은 **{cmp['kwh_yoy']:+.1f}%**입니다. "
+        "수요가 이용·공급을 앞서므로 **공공급속을 더 늘릴 필요**가 있습니다.",
         icon=":material/ev_station:",
     )
 
     st.divider()
 
-    # =====================================================================
-    # 2) 중간: 어디에 먼저? — 17시·도 전체 지도
-    # =====================================================================
-    st.markdown("### 2. 어디에 먼저 둘까 — 시·도 전체 지도")
-    year = 2024
-    st.caption(
-        f"**{year}년 전체 17개 시·도**를 한눈에 봅니다. "
-        "색이 진할수록 **활성기당 충전량**이 커서, 기기당 이용 부담이 큰 편입니다 "
-        "→ 급속 확충·분산을 **우선 점검**할 후보. (설치 확정 아님)"
-    )
+    # ------------------------------------------------------------------
+    # 2) 어디에 먼저
+    # ------------------------------------------------------------------
+    st.markdown("### 2. 어디에 먼저 — 이용 부담과 급속 비중")
 
-    map_data = rank_for_map(master, year, burden_metric)
+    year_col = _year_col(master)
+    year_opts = sorted(
+        int(y) for y in master[year_col].dropna().unique() if 2019 <= int(y) <= 2025
+    )
+    default_year = 2024 if 2024 in year_opts else year_opts[-1]
+
+    ctrl1, ctrl2 = st.columns([1, 2])
+    with ctrl1:
+        year = st.selectbox("지도 연도", year_opts, index=year_opts.index(default_year))
+    with ctrl2:
+        metric_label = st.radio(
+            "지도·순위 지표",
+            [
+                "이용 부담 (활성기당 충전량)",
+                "총 충전량",
+                "급속 여력 (EV천대당 활성기)",
+            ],
+            horizontal=True,
+            help="이용이 큰데 여력이 낮은 곳이 우선 점검 후보입니다.",
+        )
+
+    if metric_label.startswith("이용 부담"):
+        map_metric = burden_metric
+        metric_help = (
+            "색이 진할수록 **활성기당 충전량**이 커서, 기기당 이용 부담이 큰 편입니다 "
+            "→ 급속 확충·분산을 우선 점검할 후보."
+        )
+        high_is_priority = True
+    elif metric_label.startswith("총 충전량"):
+        map_metric = volume_metric
+        metric_help = (
+            "색이 진할수록 **공공급속 총 충전량**이 많습니다. "
+            "이용이 몰리는 시·도부터 용량을 볼 때 씁니다."
+        )
+        high_is_priority = True
+    else:
+        map_metric = supply_metric
+        metric_help = (
+            "색이 진할수록 EV 대비 활성기가 **많습니다(여력↑)**. "
+            "반대로 **옅은 곳**이 급속 여력이 빠듯한 후보입니다."
+        )
+        high_is_priority = False
+
+    st.caption(metric_help)
+    if year == 2025:
+        st.caption("2025년은 1–8월 관측입니다. 완전연도와 직접 비교하지 마세요.")
+
+    map_data = rank_for_map(master, year, map_metric)
     if map_data.empty:
         st.warning(f"{year}년 지도 데이터가 없습니다.")
+        top_priority = []
+        bottom_ref = []
     else:
         geojson = load_geojson()
-        map_col, bar_col = st.columns([1.2, 1])
+        map_col, bar_col = st.columns([1.25, 1])
         with map_col, st.container(border=True):
-            st.markdown("**지도 · 활성기당 충전량 (17시·도 전체)**")
+            st.markdown("**시·도 지도**")
             st.plotly_chart(
-                choropleth(geojson, map_data, burden_metric, year),
+                choropleth(geojson, map_data, map_metric, year),
                 use_container_width=True,
                 config={"displayModeBar": False},
             )
-            st.caption("진한 색 = 부담 큼. 모든 시·도가 포함됩니다.")
         with bar_col, st.container(border=True):
-            st.markdown("**막대 · 같은 지표 전체 순위**")
-            st.caption("막대가 길수록 활성기당 이용 부담이 큽니다.")
-            st.bar_chart(burden_bar_frame(map_data, burden_metric), horizontal=True)
+            st.markdown("**같은 지표 순위**")
+            st.bar_chart(burden_bar_frame(map_data, map_metric), horizontal=True)
 
-        # 상위·하위 인사이트 (전체 중)
-        sido_col = "시도" if "시도" in map_data.columns else "sido_short"
-        ranked = map_data.sort_values(burden_metric, ascending=False)
-        top3 = ranked.head(3)[sido_col].tolist()
-        bottom3 = ranked.tail(3)[sido_col].tolist()
-
-        # 여력(활성기/EV)도 낮은 곳
-        supply_data = rank_for_map(master, year, supply_metric)
-        if not supply_data.empty:
-            # supply: 낮을수록 빠듯 → ascending rank already
-            s_col = "시도" if "시도" in supply_data.columns else "sido_short"
-            tight = supply_data.nsmallest(5, supply_metric)[s_col].tolist()
-            overlap = [s for s in top3 if s in tight]
+        sido = _sido_col(map_data)
+        if high_is_priority:
+            ranked = map_data.sort_values(map_metric, ascending=False)
+            top_priority = ranked.head(3)[sido].tolist()
+            bottom_ref = ranked.tail(3)[sido].tolist()
         else:
-            tight, overlap = [], []
+            ranked = map_data.sort_values(map_metric, ascending=True)
+            top_priority = ranked.head(3)[sido].tolist()
+            bottom_ref = ranked.tail(3)[sido].tolist()
 
-        insight = (
-            f"**인사이트 (중간):** 이용 부담이 큰 편인 시·도는 "
-            f"**{', '.join(top3)}** 등입니다. "
+        # 교차: 이용 부담 상위 ∩ 급속 여력 하위
+        burden_data = rank_for_map(master, year, burden_metric)
+        supply_data = rank_for_map(master, year, supply_metric)
+        overlap = []
+        if not burden_data.empty and not supply_data.empty:
+            b_col = _sido_col(burden_data)
+            s_col = _sido_col(supply_data)
+            high_use = set(burden_data.nlargest(5, burden_metric)[b_col])
+            low_supply = set(supply_data.nsmallest(5, supply_metric)[s_col])
+            overlap = [s for s in high_use if s in low_supply]
+
+        insight2 = (
+            f"**인사이트:** 선택 지표 기준 우선 후보는 **{', '.join(top_priority)}** 쪽입니다. "
         )
         if overlap:
-            insight += (
-                f"그중 EV 대비 활성기도 낮은 편인 곳(**{', '.join(overlap)}**)은 "
-                f"급속 **우선 확충 점검** 후보로 볼 수 있습니다. "
+            insight2 += (
+                f"이용 부담은 큰데 EV 대비 활성기가 적은 곳(**{', '.join(overlap)}**)은 "
+                f"**사용량은 많고 급속 여력은 상대적으로 낮은** 패턴이라 먼저 볼 만합니다. "
             )
-        insight += (
-            f"상대적으로 부담이 작은 편은 **{', '.join(bottom3)}** 쪽입니다. "
-            "전국을 같은 강도로 늘리기보다 **진한 지역부터** 보는 것이 효율적입니다."
-        )
-        st.info(insight, icon=":material/map:")
+        insight2 += f"상대적으로 여유 있는 편은 **{', '.join(bottom_ref)}**입니다."
+        st.info(insight2, icon=":material/map:")
 
-    # 8권역 보조 (차지인포 전체 급속 구축)
-    region8 = _load_region8_latest()
-    if region8 is not None:
-        r8, as_of = region8
-        with st.expander(f"보조 · 차지인포 8권역 급속 밀도 (기준 {as_of})", expanded=False):
-            st.caption(
-                "공공급속(위 지도)과 **다른 모집단**입니다. "
-                "공공+민간 포함 전체 급속 구축의 EV당 급속기입니다. "
-                "막대가 짧을수록 EV 대비 급속이 적은 권역입니다."
-            )
-            r8_plot = r8.set_index("권역")[["EV당 급속"]].sort_values("EV당 급속")
+    # 급속 비중 — expander 없이 바로 노출
+    if fast_stock is not None:
+        st.markdown("**급속 비중 (완속 제외 판단)**")
+        st.caption(
+            "차지인포 전체 구축에서 **급속만** 본 비중입니다. "
+            "비중이 낮을수록 같은 규모 대비 급속이 얇습니다. (공공급속 지도와 모집단이 다름)"
+        )
+        r8 = (
+            fast_stock["regions"]
+            .set_index("권역")[["급속 비중(%)"]]
+            .sort_values("급속 비중(%)")
+        )
+        left, right = st.columns([1.4, 1])
+        with left, st.container(border=True):
             st.plotly_chart(
-                category_bar_chart(r8_plot),
+                category_bar_chart(r8),
                 use_container_width=True,
                 config={"displayModeBar": False},
             )
-            low = r8.nsmallest(3, "EV당 급속")["권역"].tolist()
-            st.caption(f"EV당 급속이 낮은 권역 예: {', '.join(low)}")
+        with right, st.container(border=True):
+            low3 = fast_stock["regions"].nsmallest(3, "급속 비중(%)")["권역"].tolist()
+            st.markdown(
+                f"급속 비중이 낮은 권역: **{', '.join(low3)}**\n\n"
+                f"전국 급속 비중 **{fast_stock['fast_share']:.1f}%** "
+                f"(완속:급속 ≈ {fast_stock['slow_fast']:.1f}:1).\n\n"
+                "완속을 빼고 급속 비중으로 보면, "
+                "**비중이 낮은 권역에 급속을 먼저 보강**하는 판단이 설득력을 갖습니다."
+            )
 
     st.divider()
 
-    # =====================================================================
-    # 3) 마치며 — 종합
-    # =====================================================================
-    st.markdown("### 3. 마치며 — 종합 인사이트")
-    c1, c2, c3 = st.columns(3)
-    with c1, st.container(border=True):
-        st.markdown("**무엇을 봤나**")
-        st.markdown(
-            f"EV 증가({y['ev_yoy']:+.1f}%)가 "
-            f"공공급속 활성({y['active_yoy']:+.1f}%)·이용({y['kwh_yoy']:+.1f}%)을 "
-            "크게 앞섭니다."
-        )
-    with c2, st.container(border=True):
-        st.markdown("**그래서**")
-        st.markdown(
-            "공공급속 **확충이 필요**한 신호입니다. "
-            "다만 전국 일률이 아니라 **부담이 큰 시·도부터**."
-        )
-    with c3, st.container(border=True):
-        st.markdown("**주의**")
-        st.markdown(
-            "이 화면은 **우선 점검 후보**입니다. "
-            "예산 금액·민간·완속 전체 이용량은 포함하지 않습니다."
-        )
-
+    # ------------------------------------------------------------------
+    # 3) 종합 결론 (카드/링크/한줄정리 제거)
+    # ------------------------------------------------------------------
+    st.markdown("### 3. 종합")
+    where = ", ".join(top_priority) if top_priority else "이용 부담이 큰 시·도"
+    share_txt = (
+        f"차지인포 급속 비중(전국 약 {fast_stock['fast_share']:.0f}%)"
+        if fast_stock is not None
+        else "차지인포 급속 비중"
+    )
     st.success(
-        "**한 줄 정리:** 전기차 수요 증가에 맞춰 공공급속을 더 늘릴 필요는 있어 보이며, "
-        "그 위치는 **활성기당 이용 부담이 큰 시·도(지도 진한 곳)** 부터 점검하는 것이 맞습니다.",
+        f"**국토부 전기차 증가(+{cmp['ev_yoy']:.1f}%), "
+        f"환경부 공공급속 이용·활성기(+{cmp['kwh_yoy']:.1f}% / +{cmp['active_yoy']:.1f}%), "
+        f"{share_txt}**을 종합하면, "
+        f"수요 대비 급속 확충이 필요하고 "
+        f"**이용은 많은데 급속 여력·비중이 상대적으로 낮은 곳({where})부터** "
+        f"먼저 설치·보강하는 것이 바람직하다고 봅니다.",
         icon=":material/flag:",
     )
-
-    with st.expander("데이터 정의 · 한계", expanded=False):
-        st.markdown(
-            """
-- **EV**: 국토부 등록대수  
-- **급속 활성기**: 환경부 공공급속 중 충전 실적이 있는 기기 (설치 재고 ≠ 활성)  
-- **충전량**: 환경부 공공급속 kWh (전국 모든 급속 이용량 아님)  
-- **지도**: 2024년 시·도 전체, 활성기당 충전량  
-- **8권역**: 차지인포 전체 급·완속(공공+민간) — 위 지도와 모집단이 다름  
-- 2025 충전량은 1–8월(부분연도)
-"""
-        )
-
-    st.caption("세부 필터·피크는 탐색 화면에서 이어 보세요.")
-    l1, l2, l3 = st.columns(3)
-    with l1:
-        try:
-            st.page_link("pages/01_시도_지도.py", label="지도 탐색", icon=":material/map:")
-        except Exception:
-            pass
-    with l2:
-        try:
-            st.page_link("pages/02_급속_이용_추이.py", label="추이 탐색", icon=":material/timeline:")
-        except Exception:
-            pass
-    with l3:
-        try:
-            st.page_link("pages/03_지역_상세.py", label="지역 상세", icon=":material/location_on:")
-        except Exception:
-            pass

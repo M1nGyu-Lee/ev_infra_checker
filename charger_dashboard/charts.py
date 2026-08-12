@@ -199,3 +199,53 @@ def category_bar_chart(df, *, height=None):
         ),
     )
     return fig
+
+
+def dual_axis_line(df, x_col, left_col, right_col, *, left_name, right_name, height=440):
+    """전기차(왼쪽) + 충전량(오른쪽)을 한 장에. 가로로 넓게 쓰는 발표용."""
+    plot = df.dropna(subset=[x_col]).copy()
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=plot[x_col],
+            y=plot[left_col],
+            name=left_name,
+            mode="lines",
+            line=dict(color=COLORS["ev"], width=2.5),
+            hovertemplate="%{x|%Y-%m}<br>" + left_name + ": %{y:,.0f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=plot[x_col],
+            y=plot[right_col],
+            name=right_name,
+            mode="lines",
+            line=dict(color=COLORS["charge"], width=2.5),
+            yaxis="y2",
+            hovertemplate="%{x|%Y-%m}<br>" + right_name + ": %{y:,.0f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=height,
+        margin=dict(l=56, r=64, t=28, b=48),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(
+            title=dict(text=left_name, font=dict(color=COLORS["ev"])),
+            tickfont=dict(color=COLORS["ev"]),
+            gridcolor="rgba(15,23,42,0.06)",
+            zeroline=False,
+        ),
+        yaxis2=dict(
+            title=dict(text=right_name, font=dict(color=COLORS["charge"])),
+            tickfont=dict(color=COLORS["charge"]),
+            overlaying="y",
+            side="right",
+            showgrid=False,
+            zeroline=False,
+        ),
+    )
+    return fig
