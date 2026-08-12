@@ -15,7 +15,7 @@ from charger_dashboard.data import METRIC_META
 
 
 def _sido_column(df):
-    candidates = {"시도", "시도", "sido"}
+    candidates = {"sido_short", "시도", "sido"}
     for name in df.columns:
         if name in candidates:
             return str(name)
@@ -23,7 +23,7 @@ def _sido_column(df):
 
 
 def _geo_sido(props):
-    candidates = {"시도", "시도", "sido"}
+    candidates = {"sido_short", "시도", "sido"}
     for key, value in props.items():
         if key in candidates and value is not None:
             return str(value)
@@ -151,27 +151,51 @@ def burden_bar_frame(df, metric):
 def category_bar_chart(df, *, height=None):
     """세로 막대 차트 — x축 카테고리 이름을 가로(0도)로 표시.
 
-    st.bar_chart는 라벨을 세로로 돌리는 경우가 많아, Plotly로 동일 레이아웃을 씁니다.
+    주의:
+    - st.bar_chart / horizontal=True 쓰지 않음 (라벨이 y축으로 가거나 세로 회전됨)
+    - 막대는 세로 유지, 바 폭은 category 슬롯의 ~0.72로 고정
     df 형식: 인덱스=카테고리(권역·시도·연도), 칼럼 1개=값.
     """
     plot_df = df.reset_index()
     x_col = plot_df.columns[0]
     y_col = plot_df.columns[1]
-    n = len(plot_df)
+    xs = plot_df[x_col].astype(str).tolist()
+    ys = pd.to_numeric(plot_df[y_col], errors="coerce").tolist()
+    n = len(xs)
     if height is None:
-        height = max(300, 80 + 24 * n)
-    fig = px.bar(
-        plot_df,
-        x=x_col,
-        y=y_col,
-        color_discrete_sequence=[COLORS["charge"]],
+        height = max(320, 90 + 22 * min(n, 14))
+    # 카테고리 1칸 기준 바 폭 (horizontal 레이아웃으로 바꾸지 않음)
+    bar_width = 0.72
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=xs,
+                y=ys,
+                marker_color=COLORS["charge"],
+                width=[bar_width] * n if n else None,
+                hovertemplate="%{x}<br>%{y:,.2f}<extra></extra>",
+            )
+        ]
     )
     fig.update_layout(
         showlegend=False,
         height=height,
-        margin=dict(l=48, r=16, t=12, b=72),
+        margin=dict(l=48, r=16, t=12, b=80),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        # bargap은 width 지정 시 무시되는 편 — 레이아웃만 정리
+        yaxis=dict(gridcolor="rgba(15,23,42,0.06)", zeroline=True, zerolinecolor="rgba(15,23,42,0.15)"),
+        xaxis=dict(
+            type="category",
+            categoryorder="array",
+            categoryarray=xs,
+            tickmode="array",
+            tickvals=xs,
+            ticktext=xs,
+            tickangle=0,
+            tickfont=dict(size=11 if n <= 10 else 10),
+            automargin=True,
+            title=None,
+        ),
     )
-    fig.update_xaxes(tickangle=0, type="category", tickfont=dict(size=12))
     return fig

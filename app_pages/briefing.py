@@ -9,7 +9,7 @@
 import pandas as pd
 import streamlit as st
 
-from charger_dashboard.charts import burden_bar_frame, choropleth
+from charger_dashboard.charts import burden_bar_frame, category_bar_chart, choropleth
 from charger_dashboard.data import (
     METRIC_META,
     load_geojson,
@@ -148,13 +148,17 @@ def render():
     with g1:
         st.markdown("**그래프 · 증가율 비교**")
         st.caption("막대 = 전년 동기간 대비 증감률(%). EV만 크게 솟으면 공급·이용이 못 따라간 신호입니다.")
-        st.bar_chart(
-            pd.DataFrame(
-                {
-                    "증감률(%)": [y["ev_yoy"], y["active_yoy"], y["kwh_yoy"]],
-                },
-                index=["EV 등록", "급속 활성기", "공공급속 충전량"],
-            )
+        st.plotly_chart(
+            category_bar_chart(
+                pd.DataFrame(
+                    {
+                        "증감률(%)": [y["ev_yoy"], y["active_yoy"], y["kwh_yoy"]],
+                    },
+                    index=["EV 등록", "급속 활성기", "공공급속 충전량"],
+                )
+            ),
+            use_container_width=True,
+            config={"displayModeBar": False},
         )
     with g2:
         st.markdown("**그래프 · 실제 급속 충전량 추이**")
@@ -246,7 +250,11 @@ def render():
                 "막대가 짧을수록 EV 대비 급속이 적은 권역입니다."
             )
             r8_plot = r8.set_index("권역")[["EV당 급속"]].sort_values("EV당 급속")
-            st.bar_chart(r8_plot)
+            st.plotly_chart(
+                category_bar_chart(r8_plot),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
             low = r8.nsmallest(3, "EV당 급속")["권역"].tolist()
             st.caption(f"EV당 급속이 낮은 권역 예: {', '.join(low)}")
 
