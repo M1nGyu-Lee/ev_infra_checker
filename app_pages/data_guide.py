@@ -14,55 +14,83 @@ from charger_dashboard.ui import dataframe_download
 
 
 def render():
-    st.info(
-        "이 페이지는 대시보드의 수치가 어느 파일에서 왔고 어디까지 해석 가능한지 설명합니다.",
-        icon=":material/database:",
+    st.markdown(
+        """
+        <div class="ev-hero">
+          <h1>데이터 안내</h1>
+          <p>수치가 어느 파일에서 왔고, 어디까지 해석 가능한지 정리한 페이지입니다.
+          발표·검증 전에 계층·지표·한계를 먼저 확인하세요.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+    st.markdown('<div class="ev-section-label">Analysis Layers</div>', unsafe_allow_html=True)
     st.subheader("분석 표시 계층")
-    layers = pd.DataFrame(
-        [
-            {
-                "계층": "잠재 수요",
-                "질문": "전기차가 얼마나 증가했는가?",
-                "핵심 파일": "ev_sido_monthly.csv",
-                "범위": "국토부 · 17개 시·도 · 2019-01부터 2026-06까지",
-            },
-            {
-                "계층": "설치 공급",
-                "질문": "환경부 공공급속기는 얼마나 설치됐는가?",
-                "핵심 파일": "charger_public_fast_sido_annual.csv",
-                "범위": "환경부 급속 · 17개 시·도 · 2022년까지",
-            },
-            {
-                "계층": "실제 이용 공급",
-                "질문": "실제로 이용 기록이 있는 급속기는 몇 개인가?",
-                "핵심 파일": "charge_sido_annual.csv",
-                "범위": "환경부 공공급속 · 2019년부터 2025-08까지",
-            },
-            {
-                "계층": "한전 급속 보완",
-                "질문": "한전망 급속 충전량 결측을 어떻게 채웠는가?",
-                "핵심 파일": "kepco_charge_sido_monthly_trend.csv",
-                "범위": "환경부+부하+충전소 현황 · 2019년부터 2025년까지 · 방법론 선행 명시",
-            },
-            {
-                "계층": "수요–공급 부담",
-                "질문": "EV 대비 공급과 활성기당 이용 부담은 어떤가?",
-                "핵심 파일": "sido_year_master.csv",
-                "범위": "시·도×연 통합",
-            },
-            {
-                "계층": "최신 동기간 비교",
-                "질문": "2025년 이용량은 전년 같은 기간보다 늘었는가?",
-                "핵심 파일": "charge_sido_ytd_compare.csv",
-                "범위": "2024년 1–8월 vs 2025년 1–8월",
-            },
-        ]
-    )
-    st.dataframe(layers, hide_index=True)
 
-    tabs = st.tabs(["파일별 역할", "지표 정의", "발표·대시보드 구성", "환경부 예측 방법론", "한전 보완 방법론", "품질·한계"])
+    layers = [
+        {
+            "계층": "잠재 수요",
+            "질문": "전기차가 얼마나 증가했는가?",
+            "핵심 파일": "ev_sido_monthly.csv",
+            "범위": "국토부 · 17개 시·도 · 2019-01부터 2026-06까지",
+        },
+        {
+            "계층": "설치 공급",
+            "질문": "환경부 공공급속기는 얼마나 설치됐는가?",
+            "핵심 파일": "charger_public_fast_sido_annual.csv",
+            "범위": "환경부 급속 · 17개 시·도 · 2022년까지",
+        },
+        {
+            "계층": "실제 이용 공급",
+            "질문": "실제로 이용 기록이 있는 급속기는 몇 개인가?",
+            "핵심 파일": "charge_sido_annual.csv",
+            "범위": "환경부 공공급속 · 2019년부터 2025-08까지",
+        },
+        {
+            "계층": "한전 급속 보완",
+            "질문": "한전망 급속 충전량 결측을 어떻게 채웠는가?",
+            "핵심 파일": "kepco_charge_sido_monthly_trend.csv",
+            "범위": "환경부+부하+충전소 현황 · 2019년부터 2025년까지 · 방법론 선행 명시",
+        },
+        {
+            "계층": "수요–공급 부담",
+            "질문": "EV 대비 공급과 활성기당 이용 부담은 어떤가?",
+            "핵심 파일": "sido_year_master.csv",
+            "범위": "시·도×연 통합",
+        },
+        {
+            "계층": "최신 동기간 비교",
+            "질문": "2025년 이용량은 전년 같은 기간보다 늘었는가?",
+            "핵심 파일": "charge_sido_ytd_compare.csv",
+            "범위": "2024년 1–8월 vs 2025년 1–8월",
+        },
+    ]
+
+    row1 = st.columns(3)
+    row2 = st.columns(3)
+    for idx, layer in enumerate(layers):
+        col = row1[idx] if idx < 3 else row2[idx - 3]
+        with col:
+            st.markdown(
+                f"""
+                <div class="ev-layer-card">
+                  <h4>{layer["계층"]}</h4>
+                  <div class="q">{layer["질문"]}</div>
+                  <div class="meta"><code>{layer["핵심 파일"]}</code><br>{layer["범위"]}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("")
+    with st.expander("계층 표로 보기", expanded=False):
+        st.dataframe(pd.DataFrame(layers), hide_index=True, width="stretch")
+
+    st.markdown('<div class="ev-section-label">Reference Tabs</div>', unsafe_allow_html=True)
+    tabs = st.tabs(
+        ["파일별 역할", "지표 정의", "발표·대시보드 구성", "환경부 예측 방법론", "한전 보완 방법론", "품질·한계"]
+    )
 
     with tabs[0]:
         files = pd.DataFrame(
@@ -81,7 +109,7 @@ def render():
             ],
             columns=["파일", "한 행의 단위", "주 분석"],
         )
-        st.dataframe(files, hide_index=True)
+        st.dataframe(files, hide_index=True, width="stretch")
 
     with tabs[1]:
         metrics = pd.DataFrame(
@@ -96,7 +124,7 @@ def render():
             ],
             columns=["컬럼", "정의", "해석"],
         )
-        st.dataframe(metrics, hide_index=True)
+        st.dataframe(metrics, hide_index=True, width="stretch")
 
     with tabs[2]:
         st.subheader("발표 우선순위별 대시보드 탭")
@@ -122,7 +150,7 @@ def render():
                 },
             ]
         )
-        st.dataframe(deck, hide_index=True)
+        st.dataframe(deck, hide_index=True, width="stretch")
 
     with tabs[3]:
         st.caption("환경부 공공급속 — 2025년 9월부터 12월까지 결측 보완")
@@ -139,8 +167,8 @@ def render():
         )
 
         st.subheader("입력·제외 데이터")
-        st.dataframe(pd.DataFrame(manifest["input_sources"]), hide_index=True)
-        st.dataframe(pd.DataFrame(manifest["excluded_sources"]), hide_index=True)
+        st.dataframe(pd.DataFrame(manifest["input_sources"]), hide_index=True, width="stretch")
+        st.dataframe(pd.DataFrame(manifest["excluded_sources"]), hide_index=True, width="stretch")
 
         st.subheader("추이 분석")
         st.markdown(
@@ -153,7 +181,7 @@ def render():
         )
 
         st.subheader("모형·가중치")
-        st.dataframe(pd.DataFrame(manifest["models"]), hide_index=True)
+        st.dataframe(pd.DataFrame(manifest["models"]), hide_index=True, width="stretch")
         st.dataframe(
             pd.DataFrame(
                 [
@@ -166,6 +194,7 @@ def render():
                 ]
             ),
             hide_index=True,
+            width="stretch",
         )
         with st.expander("전체 문서 (forecast_methodology.md)"):
             st.markdown(load_forecast_methodology_text())
@@ -191,7 +220,7 @@ def render():
         )
 
         st.subheader("사용 입력 데이터")
-        st.dataframe(pd.DataFrame(kepco_manifest["input_sources"]), hide_index=True)
+        st.dataframe(pd.DataFrame(kepco_manifest["input_sources"]), hide_index=True, width="stretch")
 
         st.subheader("추이 분석")
         ta = kepco_manifest["trend_analysis"]
@@ -205,7 +234,7 @@ def render():
         )
 
         st.subheader("모형 구성요소·가중치")
-        st.dataframe(pd.DataFrame(kepco_manifest["models"]), hide_index=True)
+        st.dataframe(pd.DataFrame(kepco_manifest["models"]), hide_index=True, width="stretch")
         st.dataframe(
             pd.DataFrame(
                 [
@@ -219,13 +248,14 @@ def render():
                 ]
             ),
             hide_index=True,
+            width="stretch",
         )
         ratio_rows = [
             {"시도": s, "moe_kepco_ratio": v}
             for s, v in kepco_manifest["ratio_by_sido"].items()
         ]
         with st.expander("시·도별 환경부–한전 교정 비율"):
-            st.dataframe(pd.DataFrame(ratio_rows), hide_index=True)
+            st.dataframe(pd.DataFrame(ratio_rows), hide_index=True, width="stretch")
         with st.expander("전체 문서 (forecast_methodology_kepco.md)"):
             st.markdown(load_kepco_forecast_methodology_text())
 
@@ -256,5 +286,5 @@ def render():
 
     with st.expander("통합 마스터 원자료 미리보기"):
         master = load_master()
-        st.dataframe(master, hide_index=True)
+        st.dataframe(master, hide_index=True, width="stretch")
         dataframe_download(master, "sido_year_master.csv", "마스터 CSV 다운로드")

@@ -12,7 +12,6 @@ BRAND_LOGO = Path(__file__).resolve().parent / "assets" / "brand_logo.png"
 def render_sidebar():
     inject_app_styles()
 
-    # 페이지 네비보다 위에 붙는 공식 API (PNG만 — SVG는 Cloud에서 실패)
     if BRAND_LOGO.exists():
         st.logo(str(BRAND_LOGO), size="large")
 
@@ -57,4 +56,4 @@ def render_sidebar():
         except Exception:
             st.caption("데이터 안내 페이지에서 출처·한계를 확인하세요.")
 
-        st.caption("EV Infra Checker · 공공 인프라 상대 비교 도구")
+        st.caption("공공 인프라 상대 비교 · 분석 계층 기반")
