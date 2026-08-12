@@ -19,7 +19,7 @@ from charger_dashboard.ui import (
 )
 
 
-def render() -> None:
+def render():
     priority_banner(
         3,
         "전국 전기차·공공급속 **기초 총량**을 먼저 확인하는 화면입니다.",

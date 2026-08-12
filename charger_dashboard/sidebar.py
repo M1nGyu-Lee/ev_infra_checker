@@ -1,11 +1,9 @@
 """사이드바 안내 (모든 pages/ 화면에서 공통 호출)."""
 
-from __future__ import annotations
-
 import streamlit as st
 
 
-def render_sidebar() -> None:
+def render_sidebar():
     with st.sidebar:
         st.markdown("**EV Infra Checker**")
         st.caption("공공급속 · 급·완속 보급 대시보드")

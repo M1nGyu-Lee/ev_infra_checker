@@ -24,7 +24,7 @@ from charger_dashboard.ui import (
 )
 
 
-def render() -> None:
+def render():
     priority_banner(
         1,
         "우리 지역의 공공급속 **이용·피크**를 자세히 보는 화면입니다.",

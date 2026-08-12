@@ -27,7 +27,7 @@ from charger_dashboard.ui import (
 )
 
 
-def render() -> None:
+def render():
     priority_banner(
         1,
         "시·도별 **환경부 공공급속** 부담을 지도로 비교하는 대국민용 화면입니다.",

@@ -1,7 +1,5 @@
 """Chart helpers — Plotly 지도 + Streamlit 기본 차트용 데이터 준비."""
 
-from __future__ import annotations
-
 import copy
 
 import pandas as pd
@@ -16,7 +14,7 @@ from charger_dashboard.data import METRIC_META
 # def burden_bubbles(...): return alt.Chart(df).mark_circle()...
 
 
-def _sido_column(df: pd.DataFrame) -> str:
+def _sido_column(df):
     candidates = {"시도", "시도", "sido"}
     for name in df.columns:
         if name in candidates:
@@ -24,7 +22,7 @@ def _sido_column(df: pd.DataFrame) -> str:
     raise KeyError("시·도 컬럼(sido_short/시도)이 없습니다.")
 
 
-def _geo_sido(props: dict) -> str | None:
+def _geo_sido(props):
     candidates = {"시도", "시도", "sido"}
     for key, value in props.items():
         if key in candidates and value is not None:
@@ -43,7 +41,7 @@ COLORS = {
 }
 
 
-def _burden_band(rank: float | int, n: int) -> str:
+def _burden_band(rank, n):
     if n <= 0 or pd.isna(rank):
         return "자료 없음"
     share = float(rank) / n
@@ -56,7 +54,7 @@ def _burden_band(rank: float | int, n: int) -> str:
     return "낮음"
 
 
-def _with_burden_visuals(df: pd.DataFrame) -> pd.DataFrame:
+def _with_burden_visuals(df):
     """순위 → 상대 부담 글자 + 점수(클수록 부담 큼)."""
     out = df.copy()
     n = len(out)
@@ -65,12 +63,7 @@ def _with_burden_visuals(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def choropleth(
-    geojson: dict,
-    metric_df: pd.DataFrame,
-    metric: str,
-    year: int,
-) -> go.Figure:
+def choropleth(geojson, metric_df, metric, year):
     """시·도 색칠 지도 (Plotly).
 
     흐름을 3단계로만 기억하면 됩니다.
@@ -142,7 +135,7 @@ def choropleth(
     return fig
 
 
-def burden_bar_frame(df: pd.DataFrame, metric: str) -> pd.DataFrame:
+def burden_bar_frame(df, metric):
     """버블 차트 대신: 시·도를 인덱스로 둔 막대용 표 (st.bar_chart에 넣기)."""
     # [고급 · 주석 처리] Altair mark_circle 버블 (크기=부담, 색=등급)
     # return alt.Chart(plot).mark_circle().encode(size=..., color=...)

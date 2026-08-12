@@ -22,7 +22,7 @@ from charger_dashboard.ui import (
 )
 
 
-def render() -> None:
+def render():
     priority_banner(
         2,
         "급속·완속 **충전 사업자·설치 담당**에게 어디에 어떤 속도를 깔지 판단하는 데이터 화면입니다.",
@@ -63,7 +63,7 @@ def render() -> None:
         "수요·입지 추가 확인": "급·완속 모두 상대적으로 낮음",
     }
 
-    def _with_region_label(df: pd.DataFrame) -> pd.DataFrame:
+    def _with_region_label(df):
         out = df.copy()
         out["권역표시"] = out["권역"].map(chargeinfo_region_label)
         return out
@@ -96,7 +96,7 @@ def render() -> None:
             med_fast = float(qdf["급속_대당"].median())
             med_slow = float(qdf["완속_대당"].median())
 
-            def _hint(row: pd.Series) -> str:
+            def _hint(row):
                 # 중앙값 기준으로 네 칸 중 어디에 있는지 글자로 붙임
                 hi_fast = row["급속_대당"] >= med_fast
                 hi_slow = row["완속_대당"] >= med_slow

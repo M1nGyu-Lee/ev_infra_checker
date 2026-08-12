@@ -16,7 +16,7 @@ from charger_dashboard.ui import (
 )
 
 
-def render() -> None:
+def render():
     priority_banner(
         1,
         "환경부 **공공급속** 이용이 어떻게 바뀌었는지, 한 화면에서 읽는 대국민용 추이입니다.",

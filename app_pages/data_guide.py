@@ -13,7 +13,7 @@ from charger_dashboard.data import (
 from charger_dashboard.ui import dataframe_download
 
 
-def render() -> None:
+def render():
     st.info(
         "이 페이지는 대시보드의 수치가 어느 파일에서 왔고 어디까지 해석 가능한지 설명합니다.",
         icon=":material/database:",

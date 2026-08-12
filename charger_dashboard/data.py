@@ -1,7 +1,5 @@
 """Cached data access and analysis helpers for Streamlit pages."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -87,7 +85,7 @@ METRIC_META = {
 }
 
 
-def _read_csv(name: str) -> pd.DataFrame:
+def _read_csv(name):
     path = ANALYSIS / name
     if not path.exists():
         raise FileNotFoundError(
@@ -97,7 +95,7 @@ def _read_csv(name: str) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig")
 
 
-def _read_forecast_csv(name: str) -> pd.DataFrame:
+def _read_forecast_csv(name):
     path = FORECAST / name
     if not path.exists():
         raise FileNotFoundError(
@@ -110,33 +108,33 @@ def _read_forecast_csv(name: str) -> pd.DataFrame:
 # @st.cache_data: CSV를 한 번 읽고 메모리에 보관 → 페이지 다시 그릴 때 파일 재읽기 생략
 # (개념만 배웠다면: 함수 위에 붙이는 "기억해 두기" 스티커라고 보면 됨)
 @st.cache_data(show_spinner=False)
-def load_master() -> pd.DataFrame:
+def load_master():
     return _read_csv("sido_year_master.csv")
 
 
 @st.cache_data(show_spinner=False)
-def load_ev_monthly() -> pd.DataFrame:
+def load_ev_monthly():
     df = _read_csv("ev_sido_monthly.csv")
     df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
     return df
 
 
 @st.cache_data(show_spinner=False)
-def load_charge_monthly() -> pd.DataFrame:
+def load_charge_monthly():
     df = _read_csv("charge_sido_monthly.csv")
     df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
     return df
 
 
 @st.cache_data(show_spinner=False)
-def load_charge_panel() -> pd.DataFrame:
+def load_charge_panel():
     df = _read_csv("charge_sido_monthly_panel.csv")
     df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
     return df
 
 
 @st.cache_data(show_spinner=False)
-def load_national_charge_ev_monthly() -> pd.DataFrame:
+def load_national_charge_ev_monthly():
     """Pre-aggregated national EV + public-fast charge series (fast path for trends)."""
     path = ANALYSIS / "national_charge_ev_monthly.csv"
     if not path.exists():
@@ -154,34 +152,34 @@ def load_national_charge_ev_monthly() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_charge_annual() -> pd.DataFrame:
+def load_charge_annual():
     return _read_csv("charge_sido_annual.csv")
 
 
 @st.cache_data(show_spinner=False)
-def load_charger_annual() -> pd.DataFrame:
+def load_charger_annual():
     return _read_csv("charger_public_fast_sido_annual.csv")
 
 
 @st.cache_data(show_spinner=False)
-def load_ytd_compare() -> pd.DataFrame:
+def load_ytd_compare():
     return _read_csv("charge_sido_ytd_compare.csv")
 
 
 @st.cache_data(show_spinner=False)
-def load_charge_trend() -> pd.DataFrame:
+def load_charge_trend():
     df = _read_csv("charge_sido_monthly_trend.csv")
     df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
     return df
 
 
 @st.cache_data(show_spinner=False)
-def load_charge_forecast() -> pd.DataFrame:
+def load_charge_forecast():
     return _read_forecast_csv("charge_sido_monthly_forecast.csv")
 
 
 @st.cache_data(show_spinner=False)
-def load_forecast_manifest() -> dict:
+def load_forecast_manifest():
     path = FORECAST / "forecast_run_manifest.json"
     if not path.exists():
         raise FileNotFoundError(
@@ -193,7 +191,7 @@ def load_forecast_manifest() -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def load_forecast_methodology_text() -> str:
+def load_forecast_methodology_text():
     path = FORECAST / "forecast_methodology.md"
     if not path.exists():
         raise FileNotFoundError(
@@ -204,7 +202,7 @@ def load_forecast_methodology_text() -> str:
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_region_stock() -> pd.DataFrame:
+def load_chargeinfo_region_stock():
     path = PROCESSED / "chargeinfo_region_stock_annual.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -215,7 +213,7 @@ def load_chargeinfo_region_stock() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_region_yoy() -> pd.DataFrame:
+def load_chargeinfo_region_yoy():
     path = PROCESSED / "chargeinfo_region_stock_yoy.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -226,7 +224,7 @@ def load_chargeinfo_region_yoy() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_region_stock_monthly() -> pd.DataFrame:
+def load_chargeinfo_region_stock_monthly():
     path = PROCESSED / "chargeinfo_region_stock_monthly.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -237,7 +235,7 @@ def load_chargeinfo_region_stock_monthly() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_slow_fast_ratio_monthly() -> pd.DataFrame:
+def load_chargeinfo_slow_fast_ratio_monthly():
     path = PROCESSED / "chargeinfo_region_slow_fast_ratio_monthly.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -248,7 +246,7 @@ def load_chargeinfo_slow_fast_ratio_monthly() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_ev_per_charger_wide() -> pd.DataFrame:
+def load_chargeinfo_ev_per_charger_wide():
     path = PROCESSED / "chargeinfo_ev_per_charger_ratio_wide.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -259,7 +257,7 @@ def load_chargeinfo_ev_per_charger_wide() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_ev_per_charger_avg() -> pd.DataFrame:
+def load_chargeinfo_ev_per_charger_avg():
     path = PROCESSED / "chargeinfo_ev_per_charger_ratio_avg.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -270,7 +268,7 @@ def load_chargeinfo_ev_per_charger_avg() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_kepco_station_annual() -> pd.DataFrame:
+def load_kepco_station_annual():
     path = PROCESSED / "kepco_station_sido_annual.csv"
     if not path.exists():
         raise FileNotFoundError(
@@ -281,19 +279,19 @@ def load_kepco_station_annual() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_kepco_charge_trend() -> pd.DataFrame:
+def load_kepco_charge_trend():
     df = _read_csv("kepco_charge_sido_monthly_trend.csv")
     df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
     return df
 
 
 @st.cache_data(show_spinner=False)
-def load_kepco_forecast() -> pd.DataFrame:
+def load_kepco_forecast():
     return _read_forecast_csv("kepco_charge_sido_monthly_forecast.csv")
 
 
 @st.cache_data(show_spinner=False)
-def load_kepco_forecast_manifest() -> dict:
+def load_kepco_forecast_manifest():
     path = FORECAST / "kepco_forecast_run_manifest.json"
     if not path.exists():
         raise FileNotFoundError(
@@ -305,7 +303,7 @@ def load_kepco_forecast_manifest() -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def load_kepco_forecast_methodology_text() -> str:
+def load_kepco_forecast_methodology_text():
     path = FORECAST / "forecast_methodology_kepco.md"
     if not path.exists():
         raise FileNotFoundError(
@@ -316,22 +314,22 @@ def load_kepco_forecast_methodology_text() -> str:
 
 
 @st.cache_data(show_spinner=False)
-def load_geojson() -> dict:
+def load_geojson():
     with GEOJSON_PATH.open(encoding="utf-8") as file:
         return json.load(file)
 
 
-def available_years() -> list[int]:
+def available_years():
     return sorted(load_master()["연도"].dropna().astype(int).unique().tolist())
 
 
-def latest_complete_charge_year() -> int:
+def latest_complete_charge_year():
     annual = load_charge_annual()
     complete = annual.loc[annual["기간상태"] == "complete", "연도"]
     return int(complete.max())
 
 
-def national_year(master: pd.DataFrame, year: int) -> pd.Series:
+def national_year(master, year):
     subset = master[master["연도"] == year]
     additive = [
         "전기차등록대수",
@@ -363,17 +361,17 @@ def national_year(master: pd.DataFrame, year: int) -> pd.Series:
     return pd.Series(values)
 
 
-def percent_change(current: float | int, previous: float | int) -> float | None:
+def percent_change(current, previous):
     if pd.isna(current) or pd.isna(previous) or previous == 0:
         return None
     return (current / previous - 1) * 100
 
 
-def filter_regions(df: pd.DataFrame, regions: list[str]) -> pd.DataFrame:
+def filter_regions(df, regions):
     return df[df["시도"].isin(regions)].copy()
 
 
-def rank_for_map(master: pd.DataFrame, year: int, metric: str) -> pd.DataFrame:
+def rank_for_map(master, year, metric):
     columns = ["시도", metric, "기간상태", "설비상태"]
     out = master.loc[master["연도"] == year, columns].dropna(subset=[metric]).copy()
     if out.empty:
