@@ -1,23 +1,23 @@
 """사이드바 — 브랜드(상단) · 페이지 네비(Streamlit) · 안내 패널."""
 
-from pathlib import Path
-
 import streamlit as st
 
 from charger_dashboard.ui import inject_app_styles
 
-BRAND_LOGO = Path(__file__).resolve().parent / "assets" / "brand_header.svg"
+BRAND_HTML = """
+<div class="ev-sidebar-brand">
+  <div class="ev-sidebar-brand-title">EV Infra Checker</div>
+  <div class="ev-sidebar-brand-tagline">공공급속 · 급·완속 보급 대시보드</div>
+</div>
+"""
 
 
 def render_sidebar():
     inject_app_styles()
 
-    # 로고·사이트명: Streamlit 기본 페이지 목록 바로 위
-    if BRAND_LOGO.exists():
-        st.logo(str(BRAND_LOGO))
-
     with st.sidebar:
-        st.markdown('<div class="ev-sidebar-spacer"></div>', unsafe_allow_html=True)
+        st.markdown(BRAND_HTML, unsafe_allow_html=True)
+        st.markdown('<div class="ev-sidebar-panels">', unsafe_allow_html=True)
 
         st.markdown(
             """
@@ -71,3 +71,4 @@ def render_sidebar():
             st.caption("데이터 안내 페이지에서 출처·한계를 확인하세요.")
 
         st.caption("EV Infra Checker · 공공 인프라 상대 비교 도구")
+        st.markdown("</div>", unsafe_allow_html=True)

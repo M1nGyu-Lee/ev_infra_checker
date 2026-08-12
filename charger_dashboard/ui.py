@@ -30,10 +30,44 @@ def inject_app_styles():
             background: transparent;
         }
 
-        /* 페이지 네비 링크 */
-        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
-            padding-top: 0.35rem;
+        /* 브랜드 → 페이지 네비 → 안내 패널 순서 */
+        section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+            display: flex;
+            flex-direction: column;
         }
+        section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+            display: contents;
+        }
+        .ev-sidebar-brand {
+            order: 1;
+            margin: 0.15rem 0 0.55rem;
+            padding: 0.95rem 1rem;
+            border-radius: 0.85rem;
+            background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+            box-shadow: 0 2px 8px rgba(15, 118, 110, 0.22);
+        }
+        .ev-sidebar-brand-title {
+            color: #ffffff;
+            font-size: 1.12rem;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+        .ev-sidebar-brand-tagline {
+            color: #ccfbf1;
+            font-size: 0.82rem;
+            margin-top: 0.3rem;
+            line-height: 1.35;
+        }
+        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
+            order: 2;
+            padding-top: 0.15rem;
+            padding-bottom: 0.35rem;
+        }
+        .ev-sidebar-panels {
+            order: 3;
+        }
+
+        /* 페이지 네비 링크 */
         section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
             border-radius: 0.65rem;
             margin: 0.1rem 0;
@@ -45,15 +79,6 @@ def inject_app_styles():
             background: rgba(15, 118, 110, 0.14);
             color: #0f766e;
             font-weight: 600;
-        }
-
-        /* 로고 아래 여백 */
-        section[data-testid="stSidebar"] [data-testid="stLogo"] {
-            margin-bottom: 0.15rem;
-        }
-
-        .ev-sidebar-spacer {
-            height: 0.35rem;
         }
 
         /* 안내 패널 카드 */
