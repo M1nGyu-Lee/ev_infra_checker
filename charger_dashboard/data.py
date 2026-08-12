@@ -107,6 +107,8 @@ def _read_forecast_csv(name: str) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig")
 
 
+# @st.cache_data: CSV를 한 번 읽고 메모리에 보관 → 페이지 다시 그릴 때 파일 재읽기 생략
+# (개념만 배웠다면: 함수 위에 붙이는 "기억해 두기" 스티커라고 보면 됨)
 @st.cache_data(show_spinner=False)
 def load_master() -> pd.DataFrame:
     return _read_csv("sido_year_master.csv")

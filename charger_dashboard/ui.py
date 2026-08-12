@@ -1,4 +1,4 @@
-"""Reusable Streamlit presentation helpers."""
+"""Reusable Streamlit presentation helpers (초보 친화 버전)."""
 
 from __future__ import annotations
 
@@ -11,138 +11,10 @@ from charger_dashboard.data import METRIC_META
 
 
 def inject_app_styles() -> None:
-    """Global visual polish — teal/slate infra look, denser sidebar, softer cards."""
-    st.markdown(
-        """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
-
-html, body, [class*="css"] {
-  font-family: "IBM Plex Sans KR", "IBM Plex Sans", sans-serif;
-}
-
-/* Main canvas */
-.stApp {
-  background:
-    radial-gradient(1200px 500px at 10% -10%, #ccfbf1 0%, transparent 55%),
-    radial-gradient(900px 400px at 100% 0%, #e2e8f0 0%, transparent 50%),
-    #f8fafc;
-}
-
-/* Top nav */
-[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, #0f766e 0%, #115e59 42%, #0f172a 100%);
-  border-right: none;
-}
-[data-testid="stSidebar"] * {
-  color: #f8fafc !important;
-}
-[data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] .stCaption,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-  color: #ecfdf5 !important;
-}
-[data-testid="stSidebar"] div[data-baseweb="select"] > div {
-  background-color: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.25);
-}
-[data-testid="stSidebar"] hr {
-  border-color: rgba(255,255,255,0.2);
-}
-
-/* Title */
-h1 {
-  letter-spacing: -0.02em;
-  font-weight: 700 !important;
-  color: #0f172a !important;
-  padding-top: 0.25rem !important;
-}
-
-/* Metric cards */
-[data-testid="stMetric"] {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-[data-testid="stMetricLabel"] {
-  color: #64748b !important;
-  font-weight: 500 !important;
-}
-[data-testid="stMetricValue"] {
-  color: #0f172a !important;
-  font-weight: 700 !important;
-}
-
-/* Bordered containers */
-[data-testid="stVerticalBlockBorderWrapper"] {
-  background: #ffffff;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-}
-
-/* Tabs */
-button[data-baseweb="tab"] {
-  font-weight: 600;
-}
-button[data-baseweb="tab"][aria-selected="true"] {
-  color: #0f766e !important;
-}
-
-/* Primary buttons / downloads */
-.stDownloadButton button, .stFormSubmitButton button {
-  border-radius: 10px !important;
-  font-weight: 600 !important;
-}
-
-/* Insight strip */
-.ev-insight {
-  border-left: 4px solid #0f766e;
-  background: linear-gradient(90deg, #ecfdf5 0%, #ffffff 70%);
-  border-radius: 0 14px 14px 0;
-  padding: 0.9rem 1.1rem;
-  margin: 0.4rem 0 1rem 0;
-  border: 1px solid #99f6e4;
-  border-left-width: 4px;
-}
-.ev-insight-title {
-  font-weight: 700;
-  color: #134e4a;
-  margin-bottom: 0.25rem;
-  font-size: 0.95rem;
-}
-.ev-insight-body {
-  color: #334155;
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-.ev-priority {
-  display: inline-block;
-  background: #0f766e;
-  color: #ecfdf5;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  margin-right: 0.45rem;
-  letter-spacing: 0.02em;
-}
-.ev-sidebar-brand {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 0.15rem;
-}
-.ev-sidebar-sub {
-  font-size: 0.8rem;
-  opacity: 0.85;
-  margin-bottom: 1rem;
-}
-</style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """예전에는 여기에 긴 CSS를 넣었음. 지금은 기본 Streamlit 테마만 사용."""
+    # [고급 · 주석 처리] 전역 CSS 주입 — 폰트·사이드바 그라데이션·카드 그림자 등
+    # st.markdown("""<style>...</style>""", unsafe_allow_html=True)
+    return
 
 
 def format_value(value: float | int, metric: str) -> str:
@@ -159,17 +31,18 @@ def format_delta(value: float | None, suffix: str = " 전년 대비") -> str | N
 
 
 def status_badge(status: str, month_count: float | None = None) -> None:
+    """데이터 기간 상태를 짧은 문구로 표시 (st.caption)."""
     if status == "observed":
-        st.badge("설비 관측", icon=":material/check_circle:", color="blue")
+        st.caption("상태: 설비 관측")
     elif status == "complete":
-        st.badge("완전연도", icon=":material/check_circle:", color="green")
+        st.caption("상태: 완전연도")
     elif status == "partial":
-        label = f"부분연도 · {int(month_count)}개월" if pd.notna(month_count) else "부분연도"
-        st.badge(label, icon=":material/calendar_month:", color="orange")
+        label = f"상태: 부분연도 · {int(month_count)}개월" if pd.notna(month_count) else "상태: 부분연도"
+        st.caption(label)
     elif status == "source_stale":
-        st.badge("원천 갱신 중단", icon=":material/update_disabled:", color="red")
+        st.caption("상태: 원천 갱신 중단")
     else:
-        st.badge("데이터 없음", icon=":material/info:", color="gray")
+        st.caption("상태: 데이터 없음")
 
 
 def metric_card(
@@ -185,48 +58,38 @@ def metric_card(
         "delta": format_delta(delta),
         "help": meta["help"],
         "border": True,
-        "chart_data": chart_data,
     }
+    if chart_data is not None:
+        kwargs["chart_data"] = chart_data
     st.metric(**kwargs)
 
 
 def priority_banner(priority: int, description: str) -> None:
+    """발표 순위를 한 줄로 표시."""
     labels = {
         1: "1순위 · 대국민 홍보",
         2: "2순위 · 급·완속 사업자",
         3: "3순위 · 전국 기초 총량",
     }
     label = labels.get(priority, f"{priority}순위")
-    st.markdown(
-        f'<div style="margin:0.15rem 0 0.85rem 0;color:#475569;font-size:0.92rem;">'
-        f'<span class="ev-priority">{label}</span>{description}</div>',
-        unsafe_allow_html=True,
-    )
+    # [고급 · 주석 처리] HTML 뱃지
+    # st.markdown(f'<span class="ev-priority">...</span>', unsafe_allow_html=True)
+    st.markdown(f"**{label}** — {description}")
 
 
 def insight_callout(title: str, body: str, *, tone: str = "info") -> None:
-    """Audience-facing takeaway strip (HTML) — avoids stacking many st.info boxes."""
-    accent = {
-        "info": "#0f766e",
-        "warning": "#d97706",
-        "success": "#059669",
-        "error": "#dc2626",
-    }.get(tone, "#0f766e")
-    # lightweight markdown bold -> HTML
-    safe_body = (
-        body.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\n", "<br/>")
-    )
-    while "**" in safe_body:
-        safe_body = safe_body.replace("**", "<strong>", 1).replace("**", "</strong>", 1)
-    st.markdown(
-        f'<div class="ev-insight" style="border-left-color:{accent};">'
-        f'<div class="ev-insight-title">{title}</div>'
-        f'<div class="ev-insight-body">{safe_body}</div></div>',
-        unsafe_allow_html=True,
-    )
+    """요약 박스. HTML 대신 Streamlit 기본 알림 사용."""
+    # [고급 · 주석 처리] 초록 HTML 요약박스 (ev-insight 클래스)
+    # st.markdown(f'<div class="ev-insight">...</div>', unsafe_allow_html=True)
+    text = f"**{title}**\n\n{body}"
+    if tone == "warning":
+        st.warning(text)
+    elif tone == "error":
+        st.error(text)
+    elif tone == "success":
+        st.success(text)
+    else:
+        st.info(text)
 
 
 def scope_notice() -> None:
@@ -262,18 +125,16 @@ def year_selector(
     default: int | None = None,
     label: str = "기준연도",
 ) -> int:
-    """Page-local year control (sidebar global filter removed)."""
+    """페이지마다 연도 고르기. session_state 동기화는 쓰지 않음."""
     if not years:
         raise ValueError("선택 가능한 연도가 없습니다.")
+    # [고급 · 주석 처리] 페이지끼리 연도를 맞추던 session_state 동기화
+    # preferred = st.session_state.get("selected_year", default)
     preferred = default
-    if preferred is None and "selected_year" in st.session_state:
-        preferred = int(st.session_state.selected_year)
-    if preferred not in years:
+    if preferred is None or preferred not in years:
         preferred = 2025 if 2025 in years else years[-1]
     idx = years.index(preferred)
-    chosen = st.selectbox(label, years, index=idx, key=key)
-    st.session_state.selected_year = int(chosen)
-    return int(chosen)
+    return int(st.selectbox(label, years, index=idx, key=key))
 
 
 def chargeinfo_region_label(name: str) -> str:
@@ -283,19 +144,10 @@ def chargeinfo_region_label(name: str) -> str:
 
 
 def hint_badge_html(hint: str) -> str:
-    """Colored pill for quadrant install hints."""
-    styles = {
-        "유지·관망": ("#ecfdf5", "#047857", "#a7f3d0"),
-        "급속/핫스팟 검토": ("#fff7ed", "#c2410c", "#fed7aa"),
-        "완속·거점 검토": ("#eff6ff", "#1d4ed8", "#bfdbfe"),
-        "수요·입지 추가 확인": ("#fef2f2", "#b91c1c", "#fecaca"),
-    }
-    bg, fg, border = styles.get(hint, ("#f8fafc", "#334155", "#e2e8f0"))
-    return (
-        f'<span style="display:inline-block;padding:0.25rem 0.65rem;border-radius:999px;'
-        f'background:{bg};color:{fg};border:1px solid {border};font-weight:600;'
-        f'font-size:0.85rem;">{hint}</span>'
-    )
+    """설치 힌트 문구 (HTML 뱃지 대신 그냥 글자)."""
+    # [고급 · 주석 처리] 색 있는 HTML pill
+    # return f'<span style="...">{hint}</span>'
+    return hint
 
 
 def dataframe_download(df: pd.DataFrame, filename: str, label: str = "표 CSV 다운로드") -> None:
