@@ -249,3 +249,67 @@ def dual_axis_line(df, x_col, left_col, right_col, *, left_name, right_name, hei
         ),
     )
     return fig
+
+
+def paired_year_bars(v2024, v2025, *, yoy_pct, unit, height=260):
+    """동기간 2024 vs 2025 막대 하나. 발표 YoY 차트와 같은 읽기."""
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=["2024 1–8월", "2025 1–8월"],
+                y=[v2024, v2025],
+                marker_color=[COLORS["ev"], COLORS["charge"]],
+                width=0.55,
+                text=[f"{v2024:,.0f}", f"{v2025:,.0f}"],
+                textposition="outside",
+                hovertemplate="%{x}<br>%{y:,.0f} " + unit + "<extra></extra>",
+            )
+        ]
+    )
+    fig.update_layout(
+        showlegend=False,
+        height=height,
+        margin=dict(l=40, r=16, t=36, b=40),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        yaxis=dict(gridcolor="rgba(15,23,42,0.06)", zeroline=False, title=unit),
+        xaxis=dict(title=None),
+        annotations=[
+            dict(
+                x=1,
+                y=v2025,
+                text=f"{yoy_pct:+.1f}%",
+                showarrow=False,
+                yshift=18,
+                font=dict(size=13, color=COLORS["active"]),
+            )
+        ],
+    )
+    return fig
+
+
+def sido_hbar(names, values, *, color=None, unit="", height=320):
+    """시·도 가로 막대. 값이 큰 시·도가 위에 오도록 정렬."""
+    plot = pd.DataFrame({"sido": list(names), "value": list(values)})
+    plot = plot.sort_values("value", ascending=True)
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=plot["value"],
+                y=plot["sido"],
+                orientation="h",
+                marker_color=color or COLORS["charge"],
+                hovertemplate="%{y}<br>%{x:,.1f} " + unit + "<extra></extra>",
+            )
+        ]
+    )
+    fig.update_layout(
+        showlegend=False,
+        height=height,
+        margin=dict(l=56, r=24, t=8, b=24),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(gridcolor="rgba(15,23,42,0.06)", zeroline=False, title=unit),
+        yaxis=dict(title=None),
+    )
+    return fig
