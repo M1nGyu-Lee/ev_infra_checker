@@ -199,8 +199,9 @@ def render():
 
     with tabs[2]:
         raw = panel[panel["sido_short"] == region].sort_values("year_month", ascending=False)
+        show_raw = raw.drop(columns=[c for c in ("date",) if c in raw.columns])
         st.dataframe(
-            raw.drop(columns=["date"]),
+            show_raw,
             hide_index=True,
             column_config={
                 "year_month": st.column_config.TextColumn("기준월", pinned=True),
@@ -211,10 +212,11 @@ def render():
                 "charge_hours_sum": st.column_config.NumberColumn("충전시간", format="%.2f"),
                 "active_charger_count": st.column_config.NumberColumn("활성기", format="localized"),
                 "kwh_per_ev": st.column_config.NumberColumn("EV당 kWh", format="%.2f"),
-                "sessions_per_ev": st.column_config.NumberColumn("EV당 횟수", format="%.2f"),
+                "count_per_ev": st.column_config.NumberColumn("EV당 횟수", format="%.2f"),
                 "kwh_per_active_charger": st.column_config.NumberColumn(
                     "활성기당 kWh", format="%.2f"
                 ),
             },
         )
-        dataframe_download(raw.drop(columns=["date"]), f"{region}_monthly_detail.csv")
+        drop_cols = [c for c in ("date",) if c in raw.columns]
+        dataframe_download(raw.drop(columns=drop_cols), f"{region}_monthly_detail.csv")

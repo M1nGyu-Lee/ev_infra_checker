@@ -158,10 +158,27 @@ COLUMN_ALIASES = {
 }
 
 
+# 캐시 무효화 · Cloud 재배포 시 구버전 한글 컬럼 DF가 남지 않게 함
+DATA_SCHEMA_VERSION = 3
+
+
+def col(df: pd.DataFrame, *names: str) -> str:
+    """영문/한글 후보 중 실제 존재하는 컬럼명 반환."""
+    for name in names:
+        if name in df.columns:
+            return name
+    raise KeyError(f"컬럼 없음: {names} / 실제={list(df.columns)}")
+
+
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     """한글(share_package) 컬럼명을 영문 분석 키로 통일."""
-    rename = {c: COLUMN_ALIASES[c] for c in df.columns if c in COLUMN_ALIASES}
-    out = df.rename(columns=rename)
+    out = df.copy()
+    out.columns = [str(c).replace("\ufeff", "").strip() for c in out.columns]
+    rename = {c: COLUMN_ALIASES[c] for c in out.columns if c in COLUMN_ALIASES}
+    out = out.rename(columns=rename)
+    # 동일 영문키로 중복되면 첫 컬럼만 유지
+    if out.columns.duplicated().any():
+        out = out.loc[:, ~out.columns.duplicated()].copy()
     # ref_ym 별칭: 일부 차지인포/월 표는 year_month 를 ref_ym 로도 씀
     if "year_month" in out.columns and "ref_ym" not in out.columns:
         out["ref_ym"] = out["year_month"]
@@ -172,9 +189,9 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def _parse_month_col(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-    for col in ("year_month", "ref_ym", "기준월"):
-        if col in out.columns:
-            out["date"] = pd.to_datetime(out[col], format="%Y-%m", errors="coerce")
+    for col_name in ("year_month", "ref_ym", "기준월"):
+        if col_name in out.columns:
+            out["date"] = pd.to_datetime(out[col_name], format="%Y-%m", errors="coerce")
             break
     return out
 
@@ -209,11 +226,13 @@ def _read_processed_csv(path: Path, missing_msg: str):
 # (개념만 배웠다면: 함수 위에 붙이는 "기억해 두기" 스티커라고 보면 됨)
 @st.cache_data(show_spinner=False)
 def load_master():
+    _ = DATA_SCHEMA_VERSION
     return _read_csv("sido_year_master.csv")
 
 
 @st.cache_data(show_spinner=False)
 def load_ev_monthly():
+    _ = DATA_SCHEMA_VERSION
     df = _read_csv("ev_sido_monthly.csv")
     return _parse_month_col(df)
 
@@ -226,6 +245,7 @@ def load_charge_monthly():
 
 @st.cache_data(show_spinner=False)
 def load_charge_panel():
+    _ = DATA_SCHEMA_VERSION
     df = _read_csv("charge_sido_monthly_panel.csv")
     return _parse_month_col(df)
 
@@ -233,6 +253,7 @@ def load_charge_panel():
 @st.cache_data(show_spinner=False)
 def load_national_charge_ev_monthly():
     """Pre-aggregated national EV + public-fast charge series (fast path for trends)."""
+    _ = DATA_SCHEMA_VERSION
     path = ANALYSIS / "national_charge_ev_monthly.csv"
     if not path.exists():
         panel = load_charge_panel()
@@ -249,6 +270,7 @@ def load_national_charge_ev_monthly():
 
 @st.cache_data(show_spinner=False)
 def load_charge_annual():
+    _ = DATA_SCHEMA_VERSION
     return _read_csv("charge_sido_annual.csv")
 
 
@@ -298,6 +320,7 @@ def load_forecast_methodology_text():
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_region_stock():
+    _ = DATA_SCHEMA_VERSION
     path = PROCESSED / "chargeinfo_region_stock_annual.csv"
     return _read_processed_csv(
         path,
@@ -318,6 +341,7 @@ def load_chargeinfo_region_yoy():
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_region_stock_monthly():
+    _ = DATA_SCHEMA_VERSION
     path = PROCESSED / "chargeinfo_region_stock_monthly.csv"
     return _read_processed_csv(
         path,
@@ -328,6 +352,7 @@ def load_chargeinfo_region_stock_monthly():
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_slow_fast_ratio_monthly():
+    _ = DATA_SCHEMA_VERSION
     path = PROCESSED / "chargeinfo_region_slow_fast_ratio_monthly.csv"
     return _read_processed_csv(
         path,
@@ -338,6 +363,7 @@ def load_chargeinfo_slow_fast_ratio_monthly():
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_ev_per_charger_wide():
+    _ = DATA_SCHEMA_VERSION
     path = PROCESSED / "chargeinfo_ev_per_charger_ratio_wide.csv"
     return _read_processed_csv(
         path,
@@ -348,6 +374,7 @@ def load_chargeinfo_ev_per_charger_wide():
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_ev_per_charger_avg():
+    _ = DATA_SCHEMA_VERSION
     path = PROCESSED / "chargeinfo_ev_per_charger_ratio_avg.csv"
     return _read_processed_csv(
         path,
@@ -407,31 +434,44 @@ def load_geojson():
 
 
 def available_years():
-    return sorted(load_master()["year"].dropna().astype(int).unique().tolist())
+    master = load_master()
+    year_col = col(master, "year", "연도")
+    return sorted(master[year_col].dropna().astype(int).unique().tolist())
 
 
 def latest_complete_charge_year():
     annual = load_charge_annual()
-    complete = annual.loc[annual["data_status"] == "complete", "year"]
+    status_col = col(annual, "data_status", "기간상태")
+    year_col = col(annual, "year", "연도")
+    complete = annual.loc[annual[status_col] == "complete", year_col]
     return int(complete.max())
 
 
 def national_year(master, year):
-    subset = master[master["year"] == year]
+    year_col = col(master, "year", "연도")
+    subset = master[master[year_col] == year]
     additive = [
-        "ev_count",
-        "charger_stock_end",
-        "charger_new_install",
-        "charge_kwh_sum",
-        "charge_count_sum",
-        "charge_hours_sum",
-        "active_charger_count",
+        ("ev_count", "전기차등록대수"),
+        ("charger_stock_end", "설치누적"),
+        ("charger_new_install", "신규설치"),
+        ("charge_kwh_sum", "충전량_kWh"),
+        ("charge_count_sum", "충전횟수"),
+        ("charge_hours_sum", "충전시간_h"),
+        ("active_charger_count", "활성충전기수"),
     ]
-    values = {column: subset[column].sum(min_count=1) for column in additive}
-    values["month_count"] = subset["month_count"].max()
-    values["ref_month_used"] = subset["ref_month_used"].max()
+    values = {}
+    for en, kr in additive:
+        key = en if en in subset.columns else (kr if kr in subset.columns else None)
+        values[en] = subset[key].sum(min_count=1) if key else pd.NA
+    mc = col(subset, "month_count", "관측월수") if any(
+        c in subset.columns for c in ("month_count", "관측월수")
+    ) else None
+    values["month_count"] = subset[mc].max() if mc else pd.NA
+    rm = next((c for c in ("ref_month_used", "사용기준월") if c in subset.columns), None)
+    values["ref_month_used"] = subset[rm].max() if rm else pd.NA
+    ds = next((c for c in ("data_status", "기간상태") if c in subset.columns), None)
     values["data_status"] = (
-        "partial" if (subset["data_status"] == "partial").any() else "complete"
+        "partial" if ds and (subset[ds] == "partial").any() else "complete"
     )
     if values["ev_count"] and pd.notna(values["active_charger_count"]):
         values["fast_per_1000_ev_active"] = (
@@ -455,14 +495,37 @@ def percent_change(current, previous):
 
 
 def filter_regions(df, regions):
-    return df[df["sido_short"].isin(regions)].copy()
+    sido = col(df, "sido_short", "시도")
+    return df[df[sido].isin(regions)].copy()
 
 
 def rank_for_map(master, year, metric):
-    columns = ["sido_short", metric, "data_status", "charger_stock_status"]
-    out = master.loc[master["year"] == year, columns].dropna(subset=[metric]).copy()
+    year_col = col(master, "year", "연도")
+    sido_col = col(master, "sido_short", "시도")
+    metric_col = col(master, metric, *[
+        k for k, v in COLUMN_ALIASES.items() if v == metric
+    ])
+    extras = []
+    for en, kr in (("data_status", "기간상태"), ("charger_stock_status", "설비상태")):
+        if en in master.columns:
+            extras.append(en)
+        elif kr in master.columns:
+            extras.append(kr)
+    columns = [sido_col, metric_col, *extras]
+    out = master.loc[master[year_col] == year, columns].dropna(subset=[metric_col]).copy()
     if out.empty:
         return out
+    # 표준 영문 키로 맞춤 (차트·페이지 공통)
+    out = out.rename(
+        columns={
+            sido_col: "sido_short",
+            metric_col: metric,
+            **{
+                c: ("data_status" if c in ("data_status", "기간상태") else "charger_stock_status")
+                for c in extras
+            },
+        }
+    )
     ascending = metric in {"fast_per_1000_ev_stock", "fast_per_1000_ev_active"}
     out["rank"] = out[metric].rank(method="min", ascending=ascending).astype("Int64")
     out["percentile"] = out[metric].rank(pct=True) * 100
