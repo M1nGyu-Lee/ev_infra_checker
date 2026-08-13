@@ -43,45 +43,45 @@ def render():
     year = year_selector(available_years(), key="basics_year")
 
     national_rows = []
-    for y in sorted(master["연도"].dropna().unique()):
+    for y in sorted(master["year"].dropna().unique()):
         row = national_year(master, int(y))
-        row["연도"] = int(y)
+        row["year"] = int(y)
         national_rows.append(row)
     national = pd.DataFrame(national_rows)
 
-    current = national[national["연도"] == year].iloc[0]
-    prev_row = national[national["연도"] == year - 1]
+    current = national[national["year"] == year].iloc[0]
+    prev_row = national[national["year"] == year - 1]
     previous = prev_row.iloc[0] if not prev_row.empty else pd.Series()
 
     st.subheader("전국 핵심 총량")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric(
         "전기차 등록대수",
-        f"{int(current['전기차등록대수']):,}대",
-        f"{percent_change(current['전기차등록대수'], previous.get('전기차등록대수')):+.1f}%"
-        if not prev_row.empty and pd.notna(previous.get("전기차등록대수"))
+        f"{int(current['ev_count']):,}대",
+        f"{percent_change(current['ev_count'], previous.get('ev_count')):+.1f}%"
+        if not prev_row.empty and pd.notna(previous.get("ev_count"))
         else None,
     )
     c2.metric(
         "활성 공공급속기",
-        f"{int(current['활성충전기수']):,}기"
-        if pd.notna(current.get("활성충전기수"))
+        f"{int(current['active_charger_count']):,}기"
+        if pd.notna(current.get("active_charger_count"))
         else "—",
-        f"{percent_change(current['활성충전기수'], previous.get('활성충전기수')):+.1f}%"
+        f"{percent_change(current['active_charger_count'], previous.get('active_charger_count')):+.1f}%"
         if not prev_row.empty
-        and pd.notna(current.get("활성충전기수"))
-        and pd.notna(previous.get("활성충전기수"))
+        and pd.notna(current.get("active_charger_count"))
+        and pd.notna(previous.get("active_charger_count"))
         else None,
     )
-    if pd.notna(current.get("전기차등록대수")) and pd.notna(current.get("활성충전기수")):
-        ratio = current["활성충전기수"] * 1000 / current["전기차등록대수"]
+    if pd.notna(current.get("ev_count")) and pd.notna(current.get("active_charger_count")):
+        ratio = current["active_charger_count"] * 1000 / current["ev_count"]
         c3.metric("EV 1,000대당 활성 급속기", f"{ratio:.2f}기")
     else:
         c3.metric("EV 1,000대당 활성 급속기", "—")
     c4.metric(
         "공공급속 충전량",
-        f"{current['충전량_kWh']:,.0f} kWh"
-        if pd.notna(current.get("충전량_kWh"))
+        f"{current['charge_kwh_sum']:,.0f} kWh"
+        if pd.notna(current.get("charge_kwh_sum"))
         else "—",
         help="부분연도는 관측 월만 합산",
     )
@@ -89,22 +89,22 @@ def render():
     tabs = st.tabs(["연도별 총량", "월별 EV", "시·도 한눈에", "데이터 기간 상태"])
 
     with tabs[0]:
-        chart_df = national.dropna(subset=["전기차등록대수"]).set_index("연도")
+        chart_df = national.dropna(subset=["ev_count"]).set_index("year")
         left, right = st.columns(2)
         with left, st.container(border=True):
             st.markdown("**전기차 등록대수 (연말·전국)**")
-            st.line_chart(chart_df[["전기차등록대수"]].rename(columns={"전기차등록대수": "등록대수 (대)"}))
+            st.line_chart(chart_df[["ev_count"]].rename(columns={"ev_count": "등록대수 (대)"}))
         with right, st.container(border=True):
             st.markdown("**활성 공공급속기 (연간·전국)**")
-            active = chart_df.dropna(subset=["활성충전기수"])[
-                ["활성충전기수"]
-            ].rename(columns={"활성충전기수": "활성기 (기)"})
+            active = chart_df.dropna(subset=["active_charger_count"])[
+                ["active_charger_count"]
+            ].rename(columns={"active_charger_count": "활성기 (기)"})
             st.line_chart(active)
         if has_chargeinfo:
             nat_ci = (
-                chargeinfo_stock[chargeinfo_stock["권역"] == "전국"]
-                .set_index("연도")[["누적충전기"]]
-                .rename(columns={"누적충전기": "누적 (기)"})
+                chargeinfo_stock[chargeinfo_stock["region_name"] == "전국"]
+                .set_index("year")[["charger_stock"]]
+                .rename(columns={"charger_stock": "누적 (기)"})
             )
             st.markdown("**차지인포 전국 누적 충전기 (급속+완속 합계)**")
             st.line_chart(nat_ci)
@@ -112,11 +112,11 @@ def render():
 
     with tabs[1]:
         nat_ev = (
-            ev_monthly.groupby("기준월", as_index=False)["전기차등록대수"]
+            ev_monthly.groupby("ref_ym", as_index=False)["ev_count"]
             .sum()
-            .assign(date=lambda d: pd.to_datetime(d["기준월"], format="%Y-%m"))
-            .set_index("date")[["전기차등록대수"]]
-            .rename(columns={"전기차등록대수": "전국 EV (대)"})
+            .assign(date=lambda d: pd.to_datetime(d["ref_ym"], format="%Y-%m"))
+            .set_index("date")[["ev_count"]]
+            .rename(columns={"ev_count": "전국 EV (대)"})
         )
         st.line_chart(nat_ev)
 
@@ -125,41 +125,41 @@ def render():
             f"{year}년 시·도 규모를 **막대 길이**로 비교합니다. "
             "전기차·활성기·이용량을 바로 읽도록 구성했습니다."
         )
-        snapshot = master[master["연도"] == year][
+        snapshot = master[master["year"] == year][
             [
-                "시도",
-                "전기차등록대수",
-                "활성충전기수",
-                "EV천대당활성급속",
-                "충전량_kWh",
+                "sido_short",
+                "ev_count",
+                "active_charger_count",
+                "fast_per_1000_ev_active",
+                "charge_kwh_sum",
             ]
-        ].dropna(subset=["전기차등록대수"]).sort_values("전기차등록대수", ascending=False)
+        ].dropna(subset=["ev_count"]).sort_values("ev_count", ascending=False)
 
         c_left, c_right = st.columns(2)
         with c_left, st.container(border=True):
             st.markdown("**전기차 등록대수**")
             st.bar_chart(
-                snapshot.set_index("시도")[["전기차등록대수"]].rename(
-                    columns={"전기차등록대수": "대"}
+                snapshot.set_index("sido_short")[["ev_count"]].rename(
+                    columns={"ev_count": "대"}
                 ),
                 horizontal=True,
             )
         with c_right, st.container(border=True):
             st.markdown("**활성 공공급속기**")
             st.bar_chart(
-                snapshot.dropna(subset=["활성충전기수"])
-                .set_index("시도")[["활성충전기수"]]
-                .rename(columns={"활성충전기수": "기"}),
+                snapshot.dropna(subset=["active_charger_count"])
+                .set_index("sido_short")[["active_charger_count"]]
+                .rename(columns={"active_charger_count": "기"}),
                 horizontal=True,
             )
 
         pretty = snapshot.rename(
             columns={
-                "시도": "시·도",
-                "전기차등록대수": "전기차 (대)",
-                "활성충전기수": "활성 급속기 (기)",
-                "EV천대당활성급속": "EV천대당 활성기",
-                "충전량_kWh": "공공급속 충전량 (kWh)",
+                "sido_short": "시·도",
+                "ev_count": "전기차 (대)",
+                "active_charger_count": "활성 급속기 (기)",
+                "fast_per_1000_ev_active": "EV천대당 활성기",
+                "charge_kwh_sum": "공공급속 충전량 (kWh)",
             }
         )
         st.dataframe(
@@ -187,33 +187,33 @@ def render():
             """
         )
         status_tbl = national[
-            ["연도", "전기차등록대수", "충전량_kWh", "관측월수", "기간상태"]
+            ["year", "ev_count", "charge_kwh_sum", "month_count", "data_status"]
         ].copy()
         status_tbl["충전량_표시"] = status_tbl.apply(
             lambda r: (
                 "집계 없음 (None) — 환경부 공공급속 충전량 원천 없음"
-                if int(r["연도"]) >= 2026 or pd.isna(r["충전량_kWh"])
-                else f"{r['충전량_kWh']:,.0f}"
+                if int(r["year"]) >= 2026 or pd.isna(r["charge_kwh_sum"])
+                else f"{r['charge_kwh_sum']:,.0f}"
             ),
             axis=1,
         )
         status_tbl["관측월수_표시"] = status_tbl.apply(
             lambda r: (
                 "집계 없음 (None) — 충전량 관측월 없음"
-                if int(r["연도"]) >= 2026 or pd.isna(r["관측월수"])
-                else f"{int(r['관측월수'])}개월"
+                if int(r["year"]) >= 2026 or pd.isna(r["month_count"])
+                else f"{int(r['month_count'])}개월"
             ),
             axis=1,
         )
         show = status_tbl[
-            ["연도", "전기차등록대수", "충전량_표시", "관측월수_표시", "기간상태"]
+            ["year", "ev_count", "충전량_표시", "관측월수_표시", "data_status"]
         ].rename(
             columns={
-                "연도": "연도",
-                "전기차등록대수": "전기차 등록대수",
+                "year": "연도",
+                "ev_count": "전기차 등록대수",
                 "충전량_표시": "충전량_kWh",
                 "관측월수_표시": "관측월수",
-                "기간상태": "기간 상태",
+                "data_status": "기간 상태",
             }
         )
         st.dataframe(show, hide_index=True, width="stretch")

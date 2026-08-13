@@ -33,56 +33,150 @@ CHARGEINFO_REGION_LABEL = {
 
 # Map metrics where "상대 부담" is meaningful (not raw stock counts).
 BURDEN_METRICS = {
-    "EV천대당설치급속",
-    "EV천대당활성급속",
-    "활성기당충전량",
-    "충전량_kWh",
+    "fast_per_1000_ev_stock",
+    "fast_per_1000_ev_active",
+    "kwh_per_active_charger",
+    "charge_kwh_sum",
 }
 
 METRIC_META = {
-    "전기차등록대수": {
+    "ev_count": {
         "label": "전기차 등록대수",
         "unit": "대",
         "format": ",.0f",
         "help": "해당 연도 12월 등록대수이며, 12월이 없으면 최종 관측월입니다.",
     },
-    "충전량_kWh": {
+    "charge_kwh_sum": {
         "label": "환경부 공공급속 충전량",
         "unit": "kWh",
         "format": ",.0f",
         "help": "환경부 공공급속 충전망에서 발생한 충전량입니다.",
     },
-    "활성충전기수": {
-        "label": "활성 급속충전기",
+    "active_charger_count": {
+        "label": "실제 가동 충전기",
         "unit": "기",
         "format": ",.0f",
         "help": "해당 기간에 양수 충전량 또는 충전횟수가 기록된 고유 충전기 수입니다.",
     },
-    "EV천대당설치급속": {
+    "fast_per_1000_ev_stock": {
         "label": "EV 1,000대당 설치 급속기",
         "unit": "기",
         "format": ",.2f",
         "help": "환경부 공공급속 설비 재고 기준이며 2022년까지만 사용합니다.",
     },
-    "EV천대당활성급속": {
-        "label": "EV 1,000대당 활성 급속기",
+    "fast_per_1000_ev_active": {
+        "label": "EV 1,000대당 실제 가동 충전기",
         "unit": "기",
         "format": ",.2f",
-        "help": "활성 충전기 기준 보조 공급지표입니다.",
+        "help": "실제 가동 충전기 기준 보조 공급지표입니다.",
     },
-    "활성기당충전량": {
-        "label": "활성기당 충전량",
+    "kwh_per_active_charger": {
+        "label": "실제 가동 1기당 충전량",
         "unit": "kWh/기",
         "format": ",.0f",
-        "help": "환경부 공공급속 충전량을 활성 충전기 수로 나눈 이용부담 지표입니다.",
+        "help": "환경부 공공급속 충전량을 실제 가동 충전기 수로 나눈 이용부담 지표입니다.",
     },
-    "EV당충전량": {
+    "kwh_per_ev": {
         "label": "EV당 월 충전량",
         "unit": "kWh/대",
         "format": ",.2f",
         "help": "동일 월의 환경부 공공급속 충전량을 등록 EV로 나눈 값입니다.",
     },
 }
+
+# share_package(한글 CSV) ↔ 로컬(영문 CSV) 호환. 로드 직후 영문 키로 통일한다.
+COLUMN_ALIASES = {
+    "연도": "year",
+    "월": "month",
+    "기준월": "year_month",
+    "시도": "sido_short",
+    "권역": "region_name",
+    "기간상태": "data_status",
+    "전기차등록대수": "ev_count",
+    "사용기준월": "ref_month_used",
+    "설치누적": "charger_stock_end",
+    "신규설치": "charger_new_install",
+    "설비상태": "charger_stock_status",
+    "충전량_kWh": "charge_kwh_sum",
+    "충전횟수": "charge_count_sum",
+    "충전시간_h": "charge_hours_sum",
+    "활성충전기수": "active_charger_count",
+    "관측월수": "month_count",
+    "월평균충전량": "avg_monthly_kwh",
+    "피크월": "peak_month",
+    "피크충전량": "peak_kwh",
+    "평균초과율": "peak_above_avg_pct",
+    "EV천대당설치급속": "fast_per_1000_ev_stock",
+    "EV천대당활성급속": "fast_per_1000_ev_active",
+    "설치급속당충전량": "kwh_per_fast_stock",
+    "활성기당충전량": "kwh_per_active_charger",
+    "EV당충전량": "kwh_per_ev",
+    "EV당충전횟수": "count_per_ev",
+    "충전량_2024_YTD": "charge_kwh_2024_ytd",
+    "충전량_2025_YTD": "charge_kwh_2025_ytd",
+    "충전량_YTD증감률": "charge_kwh_ytd_yoy_pct",
+    "충전횟수_2024_YTD": "charge_count_2024_ytd",
+    "충전횟수_2025_YTD": "charge_count_2025_ytd",
+    "활성기_2024_YTD": "active_charger_2024_ytd",
+    "활성기_2025_YTD": "active_charger_2025_ytd",
+    "EV_2024_YTD평균": "ev_count_2024_ytd_avg",
+    "EV_2025_YTD평균": "ev_count_2025_ytd_avg",
+    "EV당충전량_2024_YTD": "kwh_per_ev_2024_ytd",
+    "EV당충전량_2025_YTD": "kwh_per_ev_2025_ytd",
+    "비교월수": "months_compared",
+    "급속": "fast",
+    "완속": "slow",
+    "합계누적": "total_stock",
+    "완속급속비": "slow_fast_ratio",
+    "급속비중": "fast_share_pct",
+    "완속비중": "slow_share_pct",
+    "합계비중": "total_share_pct",
+    "누적충전기": "charger_stock",
+    "전국대비비중": "share_pct",
+    "전년대비증감률": "yoy_pct",
+    "급속_대당": "fast_per_ev",
+    "완속_대당": "slow_per_ev",
+    "합계_대당": "total_per_ev",
+    "완속급속강도비": "slow_fast_intensity_ratio",
+    "평균_대당충전기": "avg_per_ev",
+    "대당충전기": "per_ev",
+    "권역구성비": "region_share_pct",
+    "평균여부": "is_avg",
+    "지리단위": "geo_level",
+    "출처ID": "source_id",
+    "지표코드": "metric_code",
+    "지표명": "metric_name_kr",
+    "충전속도코드": "speed_code",
+    "충전속도": "speed_label",
+    "충전소수": "station_count",
+    "예측값": "forecast",
+    "관측값": "observed_value",
+    "하한_80": "lower_80",
+    "상한_80": "upper_80",
+    "모형ID": "model_id",
+    "잔차": "residual",
+}
+
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """한글(share_package) 컬럼명을 영문 분석 키로 통일."""
+    rename = {c: COLUMN_ALIASES[c] for c in df.columns if c in COLUMN_ALIASES}
+    out = df.rename(columns=rename)
+    # ref_ym 별칭: 일부 차지인포/월 표는 year_month 를 ref_ym 로도 씀
+    if "year_month" in out.columns and "ref_ym" not in out.columns:
+        out["ref_ym"] = out["year_month"]
+    if "ref_ym" in out.columns and "year_month" not in out.columns:
+        out["year_month"] = out["ref_ym"]
+    return out
+
+
+def _parse_month_col(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    for col in ("year_month", "ref_ym", "기준월"):
+        if col in out.columns:
+            out["date"] = pd.to_datetime(out[col], format="%Y-%m", errors="coerce")
+            break
+    return out
 
 
 def _read_csv(name):
@@ -92,7 +186,7 @@ def _read_csv(name):
             f"분석 파일이 없습니다: {path}. "
             "python scripts/build_analysis_tables.py를 먼저 실행하세요."
         )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return normalize_columns(pd.read_csv(path, encoding="utf-8-sig"))
 
 
 def _read_forecast_csv(name):
@@ -102,7 +196,13 @@ def _read_forecast_csv(name):
             f"예측 파일이 없습니다: {path}. "
             "python scripts/build_charge_forecast.py를 먼저 실행하세요."
         )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return normalize_columns(pd.read_csv(path, encoding="utf-8-sig"))
+
+
+def _read_processed_csv(path: Path, missing_msg: str):
+    if not path.exists():
+        raise FileNotFoundError(missing_msg)
+    return normalize_columns(pd.read_csv(path, encoding="utf-8-sig"))
 
 
 # @st.cache_data: CSV를 한 번 읽고 메모리에 보관 → 페이지 다시 그릴 때 파일 재읽기 생략
@@ -115,22 +215,19 @@ def load_master():
 @st.cache_data(show_spinner=False)
 def load_ev_monthly():
     df = _read_csv("ev_sido_monthly.csv")
-    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
-    return df
+    return _parse_month_col(df)
 
 
 @st.cache_data(show_spinner=False)
 def load_charge_monthly():
     df = _read_csv("charge_sido_monthly.csv")
-    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
-    return df
+    return _parse_month_col(df)
 
 
 @st.cache_data(show_spinner=False)
 def load_charge_panel():
     df = _read_csv("charge_sido_monthly_panel.csv")
-    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
-    return df
+    return _parse_month_col(df)
 
 
 @st.cache_data(show_spinner=False)
@@ -140,15 +237,14 @@ def load_national_charge_ev_monthly():
     if not path.exists():
         panel = load_charge_panel()
         df = (
-            panel.groupby("기준월", as_index=False)[
-                ["전기차등록대수", "충전량_kWh", "활성충전기수"]
+            panel.groupby("year_month", as_index=False)[
+                ["ev_count", "charge_kwh_sum", "active_charger_count"]
             ]
             .sum(min_count=1)
         )
     else:
-        df = pd.read_csv(path, encoding="utf-8-sig")
-    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
-    return df
+        df = normalize_columns(pd.read_csv(path, encoding="utf-8-sig"))
+    return _parse_month_col(df)
 
 
 @st.cache_data(show_spinner=False)
@@ -169,8 +265,7 @@ def load_ytd_compare():
 @st.cache_data(show_spinner=False)
 def load_charge_trend():
     df = _read_csv("charge_sido_monthly_trend.csv")
-    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
-    return df
+    return _parse_month_col(df)
 
 
 @st.cache_data(show_spinner=False)
@@ -204,85 +299,77 @@ def load_forecast_methodology_text():
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_region_stock():
     path = PROCESSED / "chargeinfo_region_stock_annual.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"차지인포 누적 데이터 없음: {path}. "
-            "python scripts/preprocess_chargeinfo_stock.py를 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"차지인포 누적 데이터 없음: {path}. "
+        "python scripts/preprocess_chargeinfo_stock.py를 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_region_yoy():
     path = PROCESSED / "chargeinfo_region_stock_yoy.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"차지인포 YoY 없음: {path}. "
-            "python scripts/preprocess_chargeinfo_stock.py를 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"차지인포 YoY 없음: {path}. "
+        "python scripts/preprocess_chargeinfo_stock.py를 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_region_stock_monthly():
     path = PROCESSED / "chargeinfo_region_stock_monthly.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"차지인포 월별 누적 없음: {path}. "
-            "python scripts/preprocess_chargeinfo_monthly.py를 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"차지인포 월별 누적 없음: {path}. "
+        "python scripts/preprocess_chargeinfo_monthly.py를 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_slow_fast_ratio_monthly():
     path = PROCESSED / "chargeinfo_region_slow_fast_ratio_monthly.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"차지인포 완속/급속 비율 없음: {path}. "
-            "python scripts/preprocess_chargeinfo_monthly.py를 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"차지인포 완속/급속 비율 없음: {path}. "
+        "python scripts/preprocess_chargeinfo_monthly.py를 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_ev_per_charger_wide():
     path = PROCESSED / "chargeinfo_ev_per_charger_ratio_wide.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"차지인포 EV 1대당 보급률 없음: {path}. "
-            "python scripts/preprocess_chargeinfo_ev_ratio.py를 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"차지인포 EV 1대당 보급률 없음: {path}. "
+        "python scripts/preprocess_chargeinfo_ev_ratio.py를 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_chargeinfo_ev_per_charger_avg():
     path = PROCESSED / "chargeinfo_ev_per_charger_ratio_avg.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"차지인포 EV 1대당 평균 없음: {path}. "
-            "python scripts/preprocess_chargeinfo_ev_ratio.py를 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"차지인포 EV 1대당 평균 없음: {path}. "
+        "python scripts/preprocess_chargeinfo_ev_ratio.py를 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_kepco_station_annual():
     path = PROCESSED / "kepco_station_sido_annual.csv"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"한전 충전소 현황이 없습니다: {path}. "
-            "python scripts/preprocess_kepco_aux.py를 먼저 실행하세요."
-        )
-    return pd.read_csv(path, encoding="utf-8-sig")
+    return _read_processed_csv(
+        path,
+        f"한전 충전소 현황이 없습니다: {path}. "
+        "python scripts/preprocess_kepco_aux.py를 먼저 실행하세요.",
+    )
 
 
 @st.cache_data(show_spinner=False)
 def load_kepco_charge_trend():
     df = _read_csv("kepco_charge_sido_monthly_trend.csv")
-    df["date"] = pd.to_datetime(df["기준월"], format="%Y-%m")
-    return df
+    return _parse_month_col(df)
 
 
 @st.cache_data(show_spinner=False)
@@ -320,44 +407,44 @@ def load_geojson():
 
 
 def available_years():
-    return sorted(load_master()["연도"].dropna().astype(int).unique().tolist())
+    return sorted(load_master()["year"].dropna().astype(int).unique().tolist())
 
 
 def latest_complete_charge_year():
     annual = load_charge_annual()
-    complete = annual.loc[annual["기간상태"] == "complete", "연도"]
+    complete = annual.loc[annual["data_status"] == "complete", "year"]
     return int(complete.max())
 
 
 def national_year(master, year):
-    subset = master[master["연도"] == year]
+    subset = master[master["year"] == year]
     additive = [
-        "전기차등록대수",
-        "설치누적",
-        "신규설치",
-        "충전량_kWh",
-        "충전횟수",
-        "충전시간_h",
-        "활성충전기수",
+        "ev_count",
+        "charger_stock_end",
+        "charger_new_install",
+        "charge_kwh_sum",
+        "charge_count_sum",
+        "charge_hours_sum",
+        "active_charger_count",
     ]
     values = {column: subset[column].sum(min_count=1) for column in additive}
-    values["관측월수"] = subset["관측월수"].max()
-    values["사용기준월"] = subset["사용기준월"].max()
-    values["기간상태"] = (
-        "partial" if (subset["기간상태"] == "partial").any() else "complete"
+    values["month_count"] = subset["month_count"].max()
+    values["ref_month_used"] = subset["ref_month_used"].max()
+    values["data_status"] = (
+        "partial" if (subset["data_status"] == "partial").any() else "complete"
     )
-    if values["전기차등록대수"] and pd.notna(values["활성충전기수"]):
-        values["EV천대당활성급속"] = (
-            values["활성충전기수"] * 1000 / values["전기차등록대수"]
+    if values["ev_count"] and pd.notna(values["active_charger_count"]):
+        values["fast_per_1000_ev_active"] = (
+            values["active_charger_count"] * 1000 / values["ev_count"]
         )
     else:
-        values["EV천대당활성급속"] = pd.NA
-    if values["활성충전기수"] and pd.notna(values["충전량_kWh"]):
-        values["활성기당충전량"] = (
-            values["충전량_kWh"] / values["활성충전기수"]
+        values["fast_per_1000_ev_active"] = pd.NA
+    if values["active_charger_count"] and pd.notna(values["charge_kwh_sum"]):
+        values["kwh_per_active_charger"] = (
+            values["charge_kwh_sum"] / values["active_charger_count"]
         )
     else:
-        values["활성기당충전량"] = pd.NA
+        values["kwh_per_active_charger"] = pd.NA
     return pd.Series(values)
 
 
@@ -368,15 +455,15 @@ def percent_change(current, previous):
 
 
 def filter_regions(df, regions):
-    return df[df["시도"].isin(regions)].copy()
+    return df[df["sido_short"].isin(regions)].copy()
 
 
 def rank_for_map(master, year, metric):
-    columns = ["시도", metric, "기간상태", "설비상태"]
-    out = master.loc[master["연도"] == year, columns].dropna(subset=[metric]).copy()
+    columns = ["sido_short", metric, "data_status", "charger_stock_status"]
+    out = master.loc[master["year"] == year, columns].dropna(subset=[metric]).copy()
     if out.empty:
         return out
-    ascending = metric in {"EV천대당설치급속", "EV천대당활성급속"}
+    ascending = metric in {"fast_per_1000_ev_stock", "fast_per_1000_ev_active"}
     out["rank"] = out[metric].rank(method="min", ascending=ascending).astype("Int64")
     out["percentile"] = out[metric].rank(pct=True) * 100
     return out

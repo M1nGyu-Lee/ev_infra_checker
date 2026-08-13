@@ -25,7 +25,7 @@ from charger_dashboard.ui import (
 
 def _fast_share_insight(cur, selected_ref, prev_ref):
     """급속 비중 표 직전에 보여 줄 자동 요약."""
-    ranked = cur.dropna(subset=["급속비중"]).sort_values("급속비중", ascending=False)
+    ranked = cur.dropna(subset=["fast_share_pct"]).sort_values("fast_share_pct", ascending=False)
     if ranked.empty:
         return "이 스냅샷에 표시할 급속 비중 데이터가 없습니다."
 
@@ -33,8 +33,8 @@ def _fast_share_insight(cur, selected_ref, prev_ref):
     bottom = ranked.iloc[-1]
     parts = [
         f"**{selected_ref}** 기준 급속 비중 최고는 **{top['권역표시']}** "
-        f"({top['급속비중']:.1f}%), 최저는 **{bottom['권역표시']}** "
-        f"({bottom['급속비중']:.1f}%)입니다."
+        f"({top['fast_share_pct']:.1f}%), 최저는 **{bottom['권역표시']}** "
+        f"({bottom['fast_share_pct']:.1f}%)입니다."
     ]
 
     if prev_ref and cur["fast_share_delta"].notna().any():
@@ -100,7 +100,7 @@ def render():
 
     def _with_region_label(df):
         out = df.copy()
-        out["권역표시"] = out["권역"].map(chargeinfo_region_label)
+        out["권역표시"] = out["region_name"].map(chargeinfo_region_label)
         return out
 
     tabs = st.tabs(
@@ -123,18 +123,18 @@ def render():
         if not has_chargeinfo_ev_ratio:
             st.info("차지인포 EV 1대당 보급률 데이터가 없습니다.")
         else:
-            q_refs = sorted(chargeinfo_ev_wide["기준월"].unique(), reverse=True)
+            q_refs = sorted(chargeinfo_ev_wide["ref_ym"].unique(), reverse=True)
             q_ref = st.selectbox("사분면 기준월", q_refs, index=0, key="quadrant_ref")
             qdf = _with_region_label(
-                chargeinfo_ev_wide[chargeinfo_ev_wide["기준월"] == q_ref]
+                chargeinfo_ev_wide[chargeinfo_ev_wide["ref_ym"] == q_ref]
             ).copy()
-            med_fast = float(qdf["급속_대당"].median())
-            med_slow = float(qdf["완속_대당"].median())
+            med_fast = float(qdf["fast_per_ev"].median())
+            med_slow = float(qdf["slow_per_ev"].median())
 
             def _hint(row):
                 # 중앙값 기준으로 네 칸 중 어디에 있는지 글자로 붙임
-                hi_fast = row["급속_대당"] >= med_fast
-                hi_slow = row["완속_대당"] >= med_slow
+                hi_fast = row["fast_per_ev"] >= med_fast
+                hi_slow = row["slow_per_ev"] >= med_slow
                 if hi_fast and hi_slow:
                     return "유지·관망"
                 if (not hi_fast) and hi_slow:
@@ -149,8 +149,8 @@ def render():
             # → 흩어진 점(scatter) + 표로 힌트 표시
             scatter_df = qdf.rename(
                 columns={
-                    "급속_대당": "급속(기/대)",
-                    "완속_대당": "완속(기/대)",
+                    "fast_per_ev": "급속(기/대)",
+                    "slow_per_ev": "완속(기/대)",
                 }
             )
             st.scatter_chart(
@@ -166,14 +166,14 @@ def render():
 
             st.markdown("#### 권역별 설치 힌트")
             hint_table = qdf.sort_values("설치힌트")[
-                ["권역표시", "설치힌트", "급속_대당", "완속_대당"]
+                ["권역표시", "설치힌트", "fast_per_ev", "slow_per_ev"]
             ].copy()
             hint_table["한줄"] = hint_table["설치힌트"].map(HINT_SHORT)
             hint_table = hint_table.rename(
                 columns={
                     "권역표시": "권역",
-                    "급속_대당": "급속(기/대)",
-                    "완속_대당": "완속(기/대)",
+                    "fast_per_ev": "급속(기/대)",
+                    "slow_per_ev": "완속(기/대)",
                 }
             )
             st.dataframe(hint_table, hide_index=True, width="stretch")
@@ -188,7 +188,7 @@ def render():
         if not has_chargeinfo_monthly:
             st.info("차지인포 월별 누적 데이터가 없습니다.")
         else:
-            refs = sorted(chargeinfo_ratio["기준월"].unique())
+            refs = sorted(chargeinfo_ratio["ref_ym"].unique())
             selected_ref = st.selectbox(
                 "비교 스냅샷",
                 list(reversed(refs)),
@@ -199,29 +199,29 @@ def render():
             prev_ref = prev_candidates[-1] if prev_candidates else None
 
             cur = chargeinfo_ratio[
-                (chargeinfo_ratio["기준월"] == selected_ref)
-                & (chargeinfo_ratio["권역"] != "전국")
+                (chargeinfo_ratio["ref_ym"] == selected_ref)
+                & (chargeinfo_ratio["region_name"] != "전국")
             ].copy()
             cur = _with_region_label(cur)
             if prev_ref:
                 prev = chargeinfo_ratio[
-                    (chargeinfo_ratio["기준월"] == prev_ref)
-                    & (chargeinfo_ratio["권역"] != "전국")
-                ][["권역", "급속비중", "완속급속비"]].rename(
+                    (chargeinfo_ratio["ref_ym"] == prev_ref)
+                    & (chargeinfo_ratio["region_name"] != "전국")
+                ][["region_name", "fast_share_pct", "slow_fast_ratio"]].rename(
                     columns={
-                        "급속비중": "prev_fast_share",
-                        "완속급속비": "prev_ratio",
+                        "fast_share_pct": "prev_fast_share",
+                        "slow_fast_ratio": "prev_ratio",
                     }
                 )
-                cur = cur.merge(prev, on="권역", how="left")
-                cur["fast_share_delta"] = cur["급속비중"] - cur["prev_fast_share"]
+                cur = cur.merge(prev, on="region_name", how="left")
+                cur["fast_share_delta"] = cur["fast_share_pct"] - cur["prev_fast_share"]
             else:
                 cur["fast_share_delta"] = pd.NA
 
             with st.container(border=True):
                 st.markdown(f"**{selected_ref} 권역별 급속 비중**")
-                share_bar = cur.set_index("권역표시")[["급속비중"]].rename(
-                    columns={"급속비중": "급속 비중 (%)"}
+                share_bar = cur.set_index("권역표시")[["fast_share_pct"]].rename(
+                    columns={"fast_share_pct": "급속 비중 (%)"}
                 )
                 st.plotly_chart(
                     category_bar_chart(share_bar),
@@ -254,21 +254,21 @@ def render():
             if has_chargeinfo_ev_ratio:
                 st.markdown("#### 같은 달 EV 1대당 급속 (보급 강도)")
                 snap = _with_region_label(
-                    chargeinfo_ev_wide[chargeinfo_ev_wide["기준월"] == selected_ref]
+                    chargeinfo_ev_wide[chargeinfo_ev_wide["ref_ym"] == selected_ref]
                 )
                 if snap.empty:
                     nearest = max(
-                        [r for r in chargeinfo_ev_wide["기준월"].unique() if r <= selected_ref],
+                        [r for r in chargeinfo_ev_wide["ref_ym"].unique() if r <= selected_ref],
                         default=None,
                     )
                     if nearest:
                         snap = _with_region_label(
-                            chargeinfo_ev_wide[chargeinfo_ev_wide["기준월"] == nearest]
+                            chargeinfo_ev_wide[chargeinfo_ev_wide["ref_ym"] == nearest]
                         )
                         st.caption(f"보급률 표는 {nearest} 스냅샷을 사용합니다.")
                 if not snap.empty:
-                    intensity = snap.set_index("권역표시")[["급속_대당"]].rename(
-                        columns={"급속_대당": "급속 (기/대)"}
+                    intensity = snap.set_index("권역표시")[["fast_per_ev"]].rename(
+                        columns={"fast_per_ev": "급속 (기/대)"}
                     )
                     st.plotly_chart(
                         category_bar_chart(intensity),
@@ -283,19 +283,19 @@ def render():
             show = cur[
                 [
                     "권역표시",
-                    "급속비중",
+                    "fast_share_pct",
                     "fast_share_delta",
-                    "급속",
-                    "완속",
-                    "완속급속비",
+                    "fast",
+                    "slow",
+                    "slow_fast_ratio",
                 ]
             ].rename(
                 columns={
-                    "급속비중": "급속 비중(%)",
+                    "fast_share_pct": "급속 비중(%)",
                     "fast_share_delta": "직전 대비(%p)",
-                    "급속": "급속 누적",
-                    "완속": "완속 누적",
-                    "완속급속비": "완속/급속",
+                    "fast": "급속 누적",
+                    "slow": "완속 누적",
+                    "slow_fast_ratio": "완속/급속",
                 }
             )
             st.dataframe(show.sort_values("급속 비중(%)", ascending=False), hide_index=True)
@@ -303,23 +303,23 @@ def render():
 
     with tabs[2]:
         st.subheader(f"{year}년 시·도별 공공급속 활성기·이용")
-        active = master[master["연도"] == year][
+        active = master[master["year"] == year][
             [
-                "시도",
-                "전기차등록대수",
-                "활성충전기수",
-                "EV천대당활성급속",
-                "활성기당충전량",
-                "충전량_kWh",
+                "sido_short",
+                "ev_count",
+                "active_charger_count",
+                "fast_per_1000_ev_active",
+                "kwh_per_active_charger",
+                "charge_kwh_sum",
             ]
-        ].dropna(subset=["활성충전기수"])
-        active = active.sort_values("활성기당충전량", ascending=False)
+        ].dropna(subset=["active_charger_count"])
+        active = active.sort_values("kwh_per_active_charger", ascending=False)
         st.caption(
             "활성기당 충전량이 높은 지역은 **급속 이용 부담**이 큰 편입니다. "
             "EV 대비 활성기가 낮으면 급속 추가를 검토할 수 있습니다."
         )
-        active_bar = active.set_index("시도")[["활성기당충전량"]].rename(
-            columns={"활성기당충전량": "활성기당 kWh"}
+        active_bar = active.set_index("sido_short")[["kwh_per_active_charger"]].rename(
+            columns={"kwh_per_active_charger": "활성기당 kWh"}
         )
         st.plotly_chart(
             category_bar_chart(active_bar, height=520),
@@ -331,13 +331,13 @@ def render():
 
         if len(charge_annual):
             nat = (
-                charge_annual.groupby("연도", as_index=False)[
-                    ["충전량_kWh", "활성충전기수"]
+                charge_annual.groupby("year", as_index=False)[
+                    ["charge_kwh_sum", "active_charger_count"]
                 ].sum(min_count=1)
             )
             st.subheader("전국 공공급속 이용 추이")
-            nat_line = nat.set_index("연도")[["충전량_kWh"]].rename(
-                columns={"충전량_kWh": "충전량 (kWh)"}
+            nat_line = nat.set_index("year")[["charge_kwh_sum"]].rename(
+                columns={"charge_kwh_sum": "충전량 (kWh)"}
             )
             st.line_chart(nat_line)
             st.caption(
