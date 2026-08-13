@@ -1,6 +1,6 @@
 """발표용 정책 브리핑.
 
-그래프는 위 페이지 버튼으로 바꾸고, 필터는 각 그래프 안에만 둔다.
+탭마다 그래프를 바꾸고, 필터는 그 그래프 안에서만 먹는다.
 2020–2024는 연간 전체, 2025는 1–8월을 전년 같은 달과 비교한다.
 """
 
@@ -13,6 +13,7 @@ from charger_dashboard.charts import (
     dual_axis_line,
     paired_year_bars,
     sido_hbar,
+    year_series_bars,
 )
 from charger_dashboard.data import (
     METRIC_META,
@@ -170,6 +171,160 @@ def _year_compare(master, ytd, year, sido=None):
     }
 
 
+def _complete_year_series(master, sido=None):
+    """달이 꽉 찬 연도만. 각 해의 전년 대비 %를 붙인다."""
+    yc = _year_col(master)
+    years = sorted(int(y) for y in master[yc].dropna().unique())
+    rows = []
+    for year in years:
+        if year < 2020:
+            continue
+        agg = _agg_year(master, year, sido)
+        if agg is None or agg["status"] == "partial" or agg["months"] < 12:
+            continue
+        rows.append({"year": year, "label": f"{year}년", **agg})
+    prev = None
+    for row in rows:
+        if prev is None:
+            row["ev_yoy"] = float("nan")
+            row["active_yoy"] = float("nan")
+            row["kwh_yoy"] = float("nan")
+        else:
+            row["ev_yoy"] = _yoy(row["ev"], prev["ev"])
+            row["active_yoy"] = _yoy(row["active"], prev["active"])
+            row["kwh_yoy"] = _yoy(row["kwh"], prev["kwh"])
+        prev = row
+    return rows
+
+
+def _span_compare(rows):
+    if len(rows) < 2:
+        return None
+    first, last = rows[0], rows[-1]
+    return {
+        "mode": "span",
+        "year": last["year"],
+        "prev_year": first["year"],
+        "months": 12,
+        "label_prev": first["label"],
+        "label_curr": last["label"],
+        "ev_prev": first["ev"],
+        "ev_curr": last["ev"],
+        "active_prev": first["active"],
+        "active_curr": last["active"],
+        "kwh_prev": first["kwh"],
+        "kwh_curr": last["kwh"],
+        "ev_yoy": _yoy(last["ev"], first["ev"]),
+        "active_yoy": _yoy(last["active"], first["active"]),
+        "kwh_yoy": _yoy(last["kwh"], first["kwh"]),
+    }
+
+
+def _compare_cards(cmp):
+    m1, m2, m3 = st.columns(3)
+    m1.metric(
+        "전기차 등록",
+        f"{cmp['ev_curr']:,.0f}대",
+        delta=_delta_text(cmp["ev_curr"], cmp["ev_prev"], "대", cmp["ev_yoy"]),
+        border=True,
+    )
+    m2.metric(
+        "실제 이용된 충전기",
+        f"{cmp['active_curr']:,.0f}기",
+        delta=_delta_text(cmp["active_curr"], cmp["active_prev"], "기", cmp["active_yoy"]),
+        border=True,
+    )
+    m3.metric(
+        "충전량",
+        f"{cmp['kwh_curr'] / 1e6:,.1f} GWh",
+        delta=_delta_text(
+            cmp["kwh_curr"] / 1e6,
+            cmp["kwh_prev"] / 1e6,
+            " GWh",
+            cmp["kwh_yoy"],
+            decimals=1,
+        ),
+        border=True,
+    )
+
+
+def _compare_cards_and_bars(cmp):
+    _compare_cards(cmp)
+    b1, b2, b3 = st.columns(3)
+    with b1, st.container(border=True):
+        st.markdown("**전기차 등록**")
+        _chart(
+            paired_year_bars(
+                cmp["ev_prev"],
+                cmp["ev_curr"],
+                yoy_pct=cmp["ev_yoy"],
+                unit="대",
+                label_prev=cmp["label_prev"],
+                label_curr=cmp["label_curr"],
+            )
+        )
+    with b2, st.container(border=True):
+        st.markdown("**실제 이용된 충전기 수**")
+        _chart(
+            paired_year_bars(
+                cmp["active_prev"],
+                cmp["active_curr"],
+                yoy_pct=cmp["active_yoy"],
+                unit="기",
+                label_prev=cmp["label_prev"],
+                label_curr=cmp["label_curr"],
+            )
+        )
+    with b3, st.container(border=True):
+        st.markdown("**충전량**")
+        _chart(
+            paired_year_bars(
+                cmp["kwh_prev"] / 1e6,
+                cmp["kwh_curr"] / 1e6,
+                yoy_pct=cmp["kwh_yoy"],
+                unit="GWh",
+                label_prev=cmp["label_prev"],
+                label_curr=cmp["label_curr"],
+            )
+        )
+
+
+def _series_cards_and_bars(span, rows):
+    _compare_cards(span)
+    labels = [r["label"] for r in rows]
+    s1, s2, s3 = st.columns(3)
+    with s1, st.container(border=True):
+        st.markdown("**전기차 등록 · 연도별**")
+        _chart(
+            year_series_bars(
+                labels,
+                [r["ev"] for r in rows],
+                [r["ev_yoy"] for r in rows],
+                unit="대",
+            )
+        )
+    with s2, st.container(border=True):
+        st.markdown("**실제 이용된 충전기 수 · 연도별**")
+        _chart(
+            year_series_bars(
+                labels,
+                [r["active"] for r in rows],
+                [r["active_yoy"] for r in rows],
+                unit="기",
+            )
+        )
+    with s3, st.container(border=True):
+        st.markdown("**충전량 · 연도별**")
+        _chart(
+            year_series_bars(
+                labels,
+                [r["kwh"] / 1e6 for r in rows],
+                [r["kwh_yoy"] for r in rows],
+                unit="GWh",
+            )
+        )
+
+
 def _monthly_series(nat, panel, sido, year_lo, year_hi):
     src = panel if sido else nat
     src = _ensure_date(src)
@@ -246,8 +401,8 @@ def _year_label(year):
     return f"{year}년 · 1–12월 전체"
 
 
-def _filters(key_prefix, *, sido=True, year=True, year_opts=None, default_year=None, range_years=False):
-    """이 그래프 전용 필터. 다른 화면 값과 섞이지 않게 key를 나눈다."""
+def _filters(key_prefix, *, sido=True, year=True, year_opts=None, default_year=None, range_years=False, year_format=None):
+    """이 그래프 전용 필터. 다른 탭 값과 섞이지 않게 key를 나눈다."""
     out = {}
     cols = st.columns((1.2, 1.6, 1.6)[: (1 if sido else 0) + (1 if year else 0) + (1 if range_years else 0)] or [1])
     i = 0
@@ -267,7 +422,7 @@ def _filters(key_prefix, *, sido=True, year=True, year_opts=None, default_year=N
                 "연도",
                 year_opts,
                 index=idx,
-                format_func=_year_label,
+                format_func=year_format or _year_label,
                 key=f"{key_prefix}_year",
             )
         i += 1
@@ -293,6 +448,7 @@ def _map_panel(master, year, metric, sido, *, high_is_priority, caption):
         st.caption("2025년은 1–8월 관측입니다.")
     st.caption(caption)
     geojson = load_geojson()
+    label = METRIC_META[metric]["label"]
     map_col, bar_col = st.columns([1.25, 1])
     with map_col, st.container(border=True):
         st.markdown(f"**시·도 지도 · {year}년**")
@@ -363,7 +519,19 @@ def render():
         int(v) for v in master[year_col].dropna().unique()
     )]
     default_map_year = 2024 if 2024 in year_opts else year_opts[-1]
-    default_yoy_year = 2024 if 2024 in yoy_years else yoy_years[-1]
+    default_yoy_year = yoy_years[-1] if yoy_years else None
+
+    def _fmt_yoy_year(year):
+        if year == default_yoy_year:
+            if year >= 2025:
+                return f"전년 · {year}년 1–8월"
+            return f"전년 · {year}년"
+        return _year_label(year)
+
+    def _flip_yoy_span():
+        st.session_state.yoy_span = not st.session_state.get("yoy_span", False)
+
+    st.session_state.setdefault("yoy_span", False)
 
     page = st.segmented_control(
         "이 화면에서 볼 그래프",
@@ -380,9 +548,18 @@ def render():
         with st.container(border=True):
             st.markdown("**이 그래프 필터**")
             f = _filters(
-                "yoy",
+                "yoyv2",
                 year_opts=yoy_years,
                 default_year=default_yoy_year,
+                year_format=_fmt_yoy_year,
+            )
+            span_on = st.session_state.yoy_span
+            st.button(
+                "전체 연도 기준 변화량 접기" if span_on else "전체 연도 기준 변화량 보기",
+                on_click=_flip_yoy_span,
+                key="yoy_span_btn",
+                type="secondary",
+                icon=":material/timeline:",
             )
         sido = None if f["scope"] == "전국" else f["scope"]
         place = f["scope"]
@@ -401,70 +578,7 @@ def render():
                     f"{place} · {cmp['label_curr']} 전체를 {cmp['label_prev']} 전체와 비교합니다. "
                     "실제 이용된 충전기 = 그해 충전 실적이 있는 충전기."
                 )
-            m1, m2, m3 = st.columns(3)
-            m1.metric(
-                "전기차 등록",
-                f"{cmp['ev_curr']:,.0f}대",
-                delta=_delta_text(cmp["ev_curr"], cmp["ev_prev"], "대", cmp["ev_yoy"]),
-                border=True,
-            )
-            m2.metric(
-                "실제 이용된 충전기",
-                f"{cmp['active_curr']:,.0f}기",
-                delta=_delta_text(
-                    cmp["active_curr"], cmp["active_prev"], "기", cmp["active_yoy"]
-                ),
-                border=True,
-            )
-            m3.metric(
-                "충전량",
-                f"{cmp['kwh_curr'] / 1e6:,.1f} GWh",
-                delta=_delta_text(
-                    cmp["kwh_curr"] / 1e6,
-                    cmp["kwh_prev"] / 1e6,
-                    " GWh",
-                    cmp["kwh_yoy"],
-                    decimals=1,
-                ),
-                border=True,
-            )
-            b1, b2, b3 = st.columns(3)
-            with b1, st.container(border=True):
-                st.markdown("**전기차 등록**")
-                _chart(
-                    paired_year_bars(
-                        cmp["ev_prev"],
-                        cmp["ev_curr"],
-                        yoy_pct=cmp["ev_yoy"],
-                        unit="대",
-                        label_prev=cmp["label_prev"],
-                        label_curr=cmp["label_curr"],
-                    )
-                )
-            with b2, st.container(border=True):
-                st.markdown("**실제 이용된 충전기 수**")
-                _chart(
-                    paired_year_bars(
-                        cmp["active_prev"],
-                        cmp["active_curr"],
-                        yoy_pct=cmp["active_yoy"],
-                        unit="기",
-                        label_prev=cmp["label_prev"],
-                        label_curr=cmp["label_curr"],
-                    )
-                )
-            with b3, st.container(border=True):
-                st.markdown("**충전량**")
-                _chart(
-                    paired_year_bars(
-                        cmp["kwh_prev"] / 1e6,
-                        cmp["kwh_curr"] / 1e6,
-                        yoy_pct=cmp["kwh_yoy"],
-                        unit="GWh",
-                        label_prev=cmp["label_prev"],
-                        label_curr=cmp["label_curr"],
-                    )
-                )
+            _compare_cards_and_bars(cmp)
             st.info(
                 f"**읽을 점:** {place} 전기차는 **{cmp['ev_yoy']:+.1f}%** "
                 f"({cmp['ev_curr'] - cmp['ev_prev']:+,.0f}대)인데, "
@@ -473,6 +587,30 @@ def render():
                 f"충전량은 **{cmp['kwh_yoy']:+.1f}%**입니다.",
                 icon=":material/ev_station:",
             )
+        if st.session_state.yoy_span:
+            rows = _complete_year_series(master, sido)
+            span = _span_compare(rows)
+            st.divider()
+            if span is None:
+                st.warning(f"{place} 전체 연도 비교에 쓸 연간 자료가 부족합니다.")
+            else:
+                st.markdown(
+                    f"#### {place} · {span['label_prev']}부터 {span['label_curr']}까지"
+                )
+                st.caption(
+                    "달이 꽉 찬 해끼리입니다. 2025년은 1–8월이라 이 비교에 넣지 않았습니다. "
+                    "막대 위 %는 바로 전 해 대비입니다."
+                )
+                _series_cards_and_bars(span, rows)
+                st.info(
+                    f"**읽을 점:** {place} 전기차는 {span['label_prev']} 대비 "
+                    f"**{span['ev_yoy']:+.1f}%** "
+                    f"({span['ev_curr'] - span['ev_prev']:+,.0f}대)인데, "
+                    f"실제 이용된 충전기는 **{span['active_yoy']:+.1f}%** "
+                    f"({span['active_curr'] - span['active_prev']:+,.0f}기), "
+                    f"충전량은 **{span['kwh_yoy']:+.1f}%**입니다.",
+                    icon=":material/timeline:",
+                )
 
     elif page == "월별 추이":
         st.markdown("### 월별로 보면 전기차와 충전량은 어떻게 움직이나?")

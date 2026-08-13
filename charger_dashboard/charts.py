@@ -299,6 +299,63 @@ def paired_year_bars(
     return fig
 
 
+def year_series_bars(labels, values, yoy_pcts, *, unit, height=280):
+    """연도별 막대. 첫 해 이후 막대 위에 전년 대비 %(오름=녹색, 내림=빨강)."""
+    labels = list(labels)
+    values = [float(v) for v in values]
+    n = len(labels)
+    bar_colors = [
+        COLORS["charge"] if i == n - 1 else COLORS["ev"] for i in range(n)
+    ]
+    annotations = []
+    for i, (val, pct) in enumerate(zip(values, yoy_pcts)):
+        if pct is None or pd.isna(pct):
+            continue
+        annotations.append(
+            dict(
+                x=i,
+                y=val,
+                text=f"{pct:+.1f}%",
+                showarrow=False,
+                yshift=18,
+                font=dict(
+                    size=12,
+                    color=COLORS["up"] if pct >= 0 else COLORS["danger"],
+                ),
+            )
+        )
+    ymax = max(values) if values else 1
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=labels,
+                y=values,
+                marker_color=bar_colors,
+                width=0.55,
+                text=[f"{v:,.0f}" for v in values],
+                textposition="outside",
+                hovertemplate="%{x}<br>%{y:,.0f} " + unit + "<extra></extra>",
+            )
+        ]
+    )
+    fig.update_layout(
+        showlegend=False,
+        height=height,
+        margin=dict(l=40, r=16, t=40, b=40),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        yaxis=dict(
+            gridcolor="rgba(15,23,42,0.06)",
+            zeroline=False,
+            title=unit,
+            range=[0, ymax * 1.28],
+        ),
+        xaxis=dict(title=None, type="category"),
+        annotations=annotations,
+    )
+    return fig
+
+
 def sido_hbar(
     names, values, *, color=None, unit="", height=320, highlight=None, higher_on_top=True
 ):
