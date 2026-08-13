@@ -1,7 +1,7 @@
 """발표용 정책 브리핑.
 
-스토리: 전국 괴리 → 부담 지도 → 신호 겹침 → 배치 방향.
-시연: 시·도·연도·기간을 바꾸면 같은 그래프가 따라간다.
+그래프는 위 페이지 버튼으로 바꾸고, 필터는 각 그래프 안에만 둔다.
+2020–2024는 연간 전체, 2025는 1–8월을 전년 같은 달과 비교한다.
 """
 
 import pandas as pd
@@ -9,7 +9,6 @@ import streamlit as st
 
 from charger_dashboard.charts import (
     COLORS,
-    category_bar_chart,
     choropleth,
     dual_axis_line,
     paired_year_bars,
@@ -63,32 +62,111 @@ def _ensure_date(df):
     return out
 
 
-def _period_compare(ytd, sido=None):
-    """같은 달 구간(1–N월) 전년 대비. YTD라는 말은 화면에 쓰지 않음."""
+def _yoy(curr, prev):
+    if prev is None or pd.isna(prev) or prev == 0 or curr is None or pd.isna(curr):
+        return float("nan")
+    return (float(curr) / float(prev) - 1) * 100
+
+
+def _delta_text(curr, prev, unit, pct, *, decimals=0):
+    if pd.isna(pct):
+        return None
+    diff = float(curr) - float(prev)
+    if decimals == 0:
+        return f"{diff:+,.0f}{unit}  ·  {pct:+.1f}%"
+    return f"{diff:+,.{decimals}f}{unit}  ·  {pct:+.1f}%"
+
+
+def _agg_year(master, year, sido=None):
+    yc = _year_col(master)
+    sc = _sido_col(master)
+    df = master[master[yc] == year]
+    if sido:
+        df = df[df[sc] == sido]
+    if df.empty:
+        return None
+    ev_c = _col(df, "ev_count", "전기차등록대수")
+    ac_c = _col(df, "active_charger_count", "활성충전기수")
+    kwh_c = _col(df, "charge_kwh_sum", "충전량_kWh")
+    st_c = _col(df, "data_status", "기간상태")
+    mo_c = _col(df, "month_count", "관측월수")
+    months = int(df[mo_c].max()) if df[mo_c].notna().any() else 12
+    status = "partial" if (df[st_c] == "partial").any() else "complete"
+    return {
+        "ev": float(df[ev_c].sum()),
+        "active": float(df[ac_c].sum()),
+        "kwh": float(df[kwh_c].sum()),
+        "months": months,
+        "status": status,
+    }
+
+
+def _from_ytd(ytd, sido=None):
+    """2025 부분연도: 2024·2025 같은 달(1–N월) 합."""
     df = ytd
     if sido:
         sc = _sido_col(ytd)
         df = ytd[ytd[sc] == sido]
         if df.empty:
             return None
-    kwh_2024 = float(df[_col(df, "charge_kwh_2024_ytd", "충전량_2024_YTD")].sum())
-    kwh_2025 = float(df[_col(df, "charge_kwh_2025_ytd", "충전량_2025_YTD")].sum())
-    ev_2024 = float(df[_col(df, "ev_count_2024_ytd_avg", "EV_2024_YTD평균")].sum())
-    ev_2025 = float(df[_col(df, "ev_count_2025_ytd_avg", "EV_2025_YTD평균")].sum())
-    active_2024 = float(df[_col(df, "active_charger_2024_ytd", "활성기_2024_YTD")].sum())
-    active_2025 = float(df[_col(df, "active_charger_2025_ytd", "활성기_2025_YTD")].sum())
+    kwh_prev = float(df[_col(df, "charge_kwh_2024_ytd", "충전량_2024_YTD")].sum())
+    kwh_curr = float(df[_col(df, "charge_kwh_2025_ytd", "충전량_2025_YTD")].sum())
+    ev_prev = float(df[_col(df, "ev_count_2024_ytd_avg", "EV_2024_YTD평균")].sum())
+    ev_curr = float(df[_col(df, "ev_count_2025_ytd_avg", "EV_2025_YTD평균")].sum())
+    active_prev = float(df[_col(df, "active_charger_2024_ytd", "활성기_2024_YTD")].sum())
+    active_curr = float(df[_col(df, "active_charger_2025_ytd", "활성기_2025_YTD")].sum())
     months = int(df[_col(df, "months_compared", "비교월수")].iloc[0]) if len(df) else 8
     return {
+        "mode": "same_months",
+        "year": 2025,
+        "prev_year": 2024,
         "months": months,
-        "ev_2024": ev_2024,
-        "ev_2025": ev_2025,
-        "active_2024": active_2024,
-        "active_2025": active_2025,
-        "kwh_2024": kwh_2024,
-        "kwh_2025": kwh_2025,
-        "ev_yoy": (ev_2025 / ev_2024 - 1) * 100 if ev_2024 else float("nan"),
-        "active_yoy": (active_2025 / active_2024 - 1) * 100 if active_2024 else float("nan"),
-        "kwh_yoy": (kwh_2025 / kwh_2024 - 1) * 100 if kwh_2024 else float("nan"),
+        "label_prev": f"2024년 1–{months}월",
+        "label_curr": f"2025년 1–{months}월",
+        "ev_prev": ev_prev,
+        "ev_curr": ev_curr,
+        "active_prev": active_prev,
+        "active_curr": active_curr,
+        "kwh_prev": kwh_prev,
+        "kwh_curr": kwh_curr,
+        "ev_yoy": _yoy(ev_curr, ev_prev),
+        "active_yoy": _yoy(active_curr, active_prev),
+        "kwh_yoy": _yoy(kwh_curr, kwh_prev),
+    }
+
+
+def _year_compare(master, ytd, year, sido=None):
+    """선택 연도 vs 바로 전 해.
+
+    연간이 꽉 찬 해(2020–2024)는 1–12월끼리.
+    2025처럼 달이 비면 전년 같은 달끼리(YTD 표).
+    """
+    cur = _agg_year(master, year, sido)
+    if cur is None:
+        return None
+    if cur["status"] == "partial" or cur["months"] < 12:
+        if year == 2025:
+            return _from_ytd(ytd, sido)
+        return None
+    prev = _agg_year(master, year - 1, sido)
+    if prev is None:
+        return None
+    return {
+        "mode": "full_year",
+        "year": year,
+        "prev_year": year - 1,
+        "months": 12,
+        "label_prev": f"{year - 1}년",
+        "label_curr": f"{year}년",
+        "ev_prev": prev["ev"],
+        "ev_curr": cur["ev"],
+        "active_prev": prev["active"],
+        "active_curr": cur["active"],
+        "kwh_prev": prev["kwh"],
+        "kwh_curr": cur["kwh"],
+        "ev_yoy": _yoy(cur["ev"], prev["ev"]),
+        "active_yoy": _yoy(cur["active"], prev["active"]),
+        "kwh_yoy": _yoy(cur["kwh"], prev["kwh"]),
     }
 
 
@@ -101,62 +179,133 @@ def _monthly_series(nat, panel, sido, year_lo, year_hi):
     return src[(years >= year_lo) & (years <= year_hi)].copy()
 
 
-def _fast_stock_snapshot():
-    """차지인포: 완속 제외하고 급속이 전체에서 차지하는 비중. 본편 결론 KPI가 아님."""
-    try:
-        from charger_dashboard.data import load_chargeinfo_slow_fast_ratio_monthly
-
-        sf = load_chargeinfo_slow_fast_ratio_monthly()
-    except Exception:
-        return None
-
-    ym = _col(sf, "ref_ym", "기준월")
-    reg = _col(sf, "region_name", "권역")
-    share = _col(sf, "fast_share_pct", "급속비중")
-    fast = _col(sf, "fast", "급속")
-    slow = _col(sf, "slow", "완속")
-    ratio = _col(sf, "slow_fast_ratio", "완속급속비")
-
-    latest = sf[ym].max()
-    snap = sf[sf[ym] == latest].copy()
-    nat = snap[snap[reg] == "전국"]
-    regions = snap[snap[reg] != "전국"].copy()
-    if nat.empty or regions.empty:
-        return None
-
-    row = nat.iloc[0]
-    return {
-        "as_of": str(latest),
-        "fast_share": float(row[share]),
-        "slow_fast": float(row[ratio]),
-        "fast": float(row[fast]),
-        "slow": float(row[slow]),
-        "regions": regions.rename(
-            columns={reg: "권역", share: "급속 비중(%)", fast: "급속(기)", slow: "완속(기)"}
-        ),
-    }
+def _q4_names(df, value_col, sido_col, *, higher_is_worse):
+    """17시·도를 5-4-4-4로 나눌 때 Q4(1–5위). PPT 부담·여력 등급과 같다."""
+    n = int(df[value_col].notna().sum())
+    n_q4 = n - 3 * (n // 4)
+    rank = df[value_col].rank(ascending=not higher_is_worse, method="min")
+    hit = df.loc[rank <= n_q4].sort_values(value_col, ascending=not higher_is_worse)
+    return hit[sido_col].astype(str).tolist()
 
 
-def _q4_signals(master, year, year_col, sido_col, burden_col):
-    """선택 연도 부담 상위 ~25%(Q4)의 기당 kWh · EV/기 · 3년 CAGR."""
-    year_df = master[master[year_col] == year].dropna(subset=[burden_col, sido_col]).copy()
-    if year_df.empty:
-        return pd.DataFrame()
-    year_df["ev_per_active"] = year_df["ev_count"] / year_df["active_charger_count"]
-    n = len(year_df)
-    year_df["burden_rank"] = year_df[burden_col].rank(ascending=False, method="min")
-    q4 = year_df[year_df["burden_rank"] <= max(1, round(n * 0.25))].copy()
-
-    prev = master[master[year_col] == year - 3][[sido_col, "ev_count"]].rename(
-        columns={"ev_count": "ev_then"}
-    )
-    q4 = q4.merge(prev, on=sido_col, how="left")
-    q4["cagr"] = (q4["ev_count"] / q4["ev_then"]) ** (1 / 3) - 1
-    return q4.sort_values(burden_col, ascending=False)
+def _priority_groups(master, year):
+    yc = _year_col(master)
+    sc = _sido_col(master)
+    burden_c = _col(master, "kwh_per_active_charger", "활성기당충전량")
+    supply_c = _col(master, "fast_per_1000_ev_active", "EV천대당활성급속")
+    df = master[master[yc] == year].dropna(subset=[burden_c, supply_c, sc]).copy()
+    if df.empty:
+        return [], [], []
+    busy = _q4_names(df, burden_c, sc, higher_is_worse=True)
+    tight = _q4_names(df, supply_c, sc, higher_is_worse=False)
+    both = [s for s in busy if s in tight]
+    burden_only = [s for s in busy if s not in tight]
+    supply_only = [s for s in tight if s not in busy]
+    return both, burden_only, supply_only
 
 
 def _chart(fig):
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+
+
+def _year_label(year):
+    if year >= 2025:
+        return f"{year}년 · 1–8월을 전년 같은 달과 비교"
+    return f"{year}년 · 1–12월 전체"
+
+
+def _filters(key_prefix, *, sido=True, year=True, year_opts=None, default_year=None, range_years=False):
+    """이 그래프 전용 필터. 다른 화면 값과 섞이지 않게 key를 나눈다."""
+    out = {}
+    cols = st.columns((1.2, 1.6, 1.6)[: (1 if sido else 0) + (1 if year else 0) + (1 if range_years else 0)] or [1])
+    i = 0
+    if sido:
+        with cols[i]:
+            out["scope"] = st.selectbox(
+                "시·도",
+                ["전국", *SIDO_ORDER],
+                index=0,
+                key=f"{key_prefix}_sido",
+            )
+        i += 1
+    if year and year_opts:
+        idx = year_opts.index(default_year) if default_year in year_opts else len(year_opts) - 1
+        with cols[i]:
+            out["year"] = st.selectbox(
+                "연도",
+                year_opts,
+                index=idx,
+                format_func=_year_label,
+                key=f"{key_prefix}_year",
+            )
+        i += 1
+    if range_years and year_opts:
+        with cols[i]:
+            lo, hi = year_opts[0], year_opts[-1]
+            out["year_lo"], out["year_hi"] = st.slider(
+                "기간",
+                min_value=lo,
+                max_value=hi,
+                value=(max(lo, 2020), hi),
+                key=f"{key_prefix}_range",
+            )
+    return out
+
+
+def _map_panel(master, year, metric, sido, *, high_is_priority, caption):
+    map_data = rank_for_map(master, year, metric)
+    if map_data.empty:
+        st.warning(f"{year}년 지도 데이터가 없습니다.")
+        return
+    if year >= 2025:
+        st.caption("2025년은 1–8월 관측입니다.")
+    st.caption(caption)
+    geojson = load_geojson()
+    map_col, bar_col = st.columns([1.25, 1])
+    with map_col, st.container(border=True):
+        st.markdown(f"**시·도 지도 · {year}년**")
+        _chart(choropleth(geojson, map_data, metric, year))
+    with bar_col, st.container(border=True):
+        st.markdown("**같은 숫자 순위**")
+        sc = _sido_col(map_data)
+        _chart(
+            sido_hbar(
+                map_data[sc],
+                map_data[metric],
+                color=COLORS["charge"],
+                unit=METRIC_META[metric]["unit"],
+                height=520,
+                highlight=sido,
+                higher_on_top=high_is_priority,
+            )
+        )
+    sc = _sido_col(map_data)
+    ranked = map_data.sort_values(metric, ascending=not high_is_priority)
+    top = ranked.head(5)[sc].astype(str).tolist()
+    if sido:
+        names = list(ranked[sc].astype(str))
+        if sido in names:
+            rank = names.index(sido) + 1
+            st.info(
+                f"**읽을 점:** {year}년 {sido}는 **{rank}위 / {len(names)}곳**입니다. "
+                f"{'부담이 큰' if high_is_priority else '충전기가 부족한'} 쪽은 {', '.join(top)}입니다.",
+                icon=":material/map:",
+            )
+            return
+    st.info(
+        f"**읽을 점:** {year}년 {'부담이 큰' if high_is_priority else '전기차 대비 충전기가 부족한'} "
+        f"시·도는 **{', '.join(top)}**입니다.",
+        icon=":material/map:",
+    )
+
+
+BRIEF_PAGES = [
+    "전년 대비",
+    "월별 추이",
+    "이용 부담",
+    "전기차 대비 충전기",
+    "종합",
+]
 
 
 def render():
@@ -164,7 +313,6 @@ def render():
     nat = _ensure_date(load_national_charge_ev_monthly())
     panel = _ensure_date(load_charge_panel())
     ytd = load_ytd_compare()
-    fast_stock = _fast_stock_snapshot()
 
     c_date = "date"
     c_ev = _col(nat, "ev_count", "전기차등록대수")
@@ -173,289 +321,257 @@ def render():
     panel_kwh = _col(panel, "charge_kwh_sum", "충전량_kWh")
 
     burden_metric = _pick_metric("kwh_per_active_charger", "활성기당충전량")
-    volume_metric = _pick_metric("charge_kwh_sum", "충전량_kWh")
     supply_metric = _pick_metric("fast_per_1000_ev_active", "EV천대당활성급속")
 
     year_col = _year_col(master)
-    sido_col_m = _sido_col(master)
     year_opts = sorted(
-        int(y) for y in master[year_col].dropna().unique() if 2019 <= int(y) <= 2025
+        int(y) for y in master[year_col].dropna().unique() if 2020 <= int(y) <= 2025
     )
-    default_year = 2024 if 2024 in year_opts else year_opts[-1]
+    yoy_years = [y for y in year_opts if (y - 1) in set(
+        int(v) for v in master[year_col].dropna().unique()
+    )]
+    default_map_year = 2024 if 2024 in year_opts else year_opts[-1]
+    default_yoy_year = 2024 if 2024 in yoy_years else yoy_years[-1]
 
-    with st.container(border=True):
-        st.markdown("**화면 필터**")
-        st.caption("시·도·연도·기간을 바꾸면 아래 그래프가 바로 바뀝니다.")
-        f1, f2, f3 = st.columns([1.1, 0.9, 1.6])
-        with f1:
-            scope = st.selectbox("시·도", ["전국", *SIDO_ORDER], index=0, key="brief_sido")
-        with f2:
-            year = st.selectbox(
-                "지도 연도", year_opts, index=year_opts.index(default_year), key="brief_year"
+    page = st.segmented_control(
+        "이 화면에서 볼 그래프",
+        BRIEF_PAGES,
+        default=BRIEF_PAGES[0],
+        key="brief_page",
+    )
+    if page is None:
+        page = BRIEF_PAGES[0]
+    st.caption("위를 누르면 그래프가 바뀝니다. 시·도·연도 필터는 각 그래프 안에 있습니다.")
+
+    if page == "전년 대비":
+        st.markdown("### 전기차는 늘었는데, 충전기·충전량은 따라갔을까?")
+        with st.container(border=True):
+            st.markdown("**이 그래프 필터**")
+            f = _filters(
+                "yoy",
+                year_opts=yoy_years,
+                default_year=default_yoy_year,
             )
-        with f3:
-            year_lo, year_hi = st.slider(
-                "월별 추이 기간",
-                min_value=2019,
-                max_value=2025,
-                value=(2022, 2025),
-                key="brief_range",
+        sido = None if f["scope"] == "전국" else f["scope"]
+        place = f["scope"]
+        year = f["year"]
+        cmp = _year_compare(master, ytd, year, sido)
+        if cmp is None:
+            st.warning(f"{place} {year}년 전년 대비 데이터가 없습니다.")
+        else:
+            if cmp["mode"] == "same_months":
+                st.caption(
+                    f"{place} · {cmp['label_curr']}을 {cmp['label_prev']}과 같은 달끼리 비교합니다. "
+                    "2020–2024년을 고르면 1–12월 전체끼리 비교합니다."
+                )
+            else:
+                st.caption(
+                    f"{place} · {cmp['label_curr']} 전체를 {cmp['label_prev']} 전체와 비교합니다. "
+                    "실제 이용된 충전기 = 그해 충전 실적이 있는 충전기."
+                )
+            m1, m2, m3 = st.columns(3)
+            m1.metric(
+                "전기차 등록",
+                f"{cmp['ev_curr']:,.0f}대",
+                delta=_delta_text(cmp["ev_curr"], cmp["ev_prev"], "대", cmp["ev_yoy"]),
+                border=True,
             )
-        metric_label = st.segmented_control(
-            "지도·순위에 볼 것",
-            ["이용 부담", "총 충전량", "급속 여력"],
-            default="이용 부담",
-            key="brief_metric",
-            help="발표 본편은 이용 부담입니다. 급속 여력은 옅은 곳이 빠듯합니다.",
-        )
+            m2.metric(
+                "실제 이용된 충전기",
+                f"{cmp['active_curr']:,.0f}기",
+                delta=_delta_text(
+                    cmp["active_curr"], cmp["active_prev"], "기", cmp["active_yoy"]
+                ),
+                border=True,
+            )
+            m3.metric(
+                "충전량",
+                f"{cmp['kwh_curr'] / 1e6:,.1f} GWh",
+                delta=_delta_text(
+                    cmp["kwh_curr"] / 1e6,
+                    cmp["kwh_prev"] / 1e6,
+                    " GWh",
+                    cmp["kwh_yoy"],
+                    decimals=1,
+                ),
+                border=True,
+            )
+            b1, b2, b3 = st.columns(3)
+            with b1, st.container(border=True):
+                st.markdown("**전기차 등록**")
+                _chart(
+                    paired_year_bars(
+                        cmp["ev_prev"],
+                        cmp["ev_curr"],
+                        yoy_pct=cmp["ev_yoy"],
+                        unit="대",
+                        label_prev=cmp["label_prev"],
+                        label_curr=cmp["label_curr"],
+                    )
+                )
+            with b2, st.container(border=True):
+                st.markdown("**실제 이용된 충전기 수**")
+                _chart(
+                    paired_year_bars(
+                        cmp["active_prev"],
+                        cmp["active_curr"],
+                        yoy_pct=cmp["active_yoy"],
+                        unit="기",
+                        label_prev=cmp["label_prev"],
+                        label_curr=cmp["label_curr"],
+                    )
+                )
+            with b3, st.container(border=True):
+                st.markdown("**충전량**")
+                _chart(
+                    paired_year_bars(
+                        cmp["kwh_prev"] / 1e6,
+                        cmp["kwh_curr"] / 1e6,
+                        yoy_pct=cmp["kwh_yoy"],
+                        unit="GWh",
+                        label_prev=cmp["label_prev"],
+                        label_curr=cmp["label_curr"],
+                    )
+                )
+            st.info(
+                f"**읽을 점:** {place} 전기차는 **{cmp['ev_yoy']:+.1f}%** "
+                f"({cmp['ev_curr'] - cmp['ev_prev']:+,.0f}대)인데, "
+                f"실제 이용된 충전기는 **{cmp['active_yoy']:+.1f}%** "
+                f"({cmp['active_curr'] - cmp['active_prev']:+,.0f}기), "
+                f"충전량은 **{cmp['kwh_yoy']:+.1f}%**입니다.",
+                icon=":material/ev_station:",
+            )
 
-    sido = None if scope == "전국" else scope
-    place = "전국" if sido is None else sido
-    cmp = _period_compare(ytd, sido)
-    monthly = _monthly_series(nat, panel, sido, year_lo, year_hi)
-    ev_col = c_ev if sido is None else panel_ev
-    kwh_col = c_kwh if sido is None else panel_kwh
-
-    if metric_label == "총 충전량":
-        map_metric = volume_metric
-        metric_help = "색이 진할수록 공공급속 총 충전량이 많습니다."
-        high_is_priority = True
-    elif metric_label == "급속 여력":
-        map_metric = supply_metric
-        metric_help = "색이 진할수록 EV 대비 실제 가동이 많습니다. 옅은 곳이 여력이 빠듯합니다."
-        high_is_priority = False
-    else:
-        map_metric = burden_metric
-        metric_help = "색이 진할수록 가동 1기당 충전량이 큽니다."
-        high_is_priority = True
-        metric_label = "이용 부담"
-
-    # ------------------------------------------------------------------
-    # 1) 괴리
-    # ------------------------------------------------------------------
-    st.markdown(f"### 1. {place} — EV와 공공급속")
-    if cmp is None:
-        st.warning(f"{place} 동기간 비교 데이터가 없습니다.")
-    else:
+    elif page == "월별 추이":
+        st.markdown("### 월별로 보면 전기차와 충전량은 어떻게 움직이나?")
+        with st.container(border=True):
+            st.markdown("**이 그래프 필터**")
+            f = _filters(
+                "trend",
+                year=False,
+                range_years=True,
+                year_opts=year_opts,
+            )
+        sido = None if f["scope"] == "전국" else f["scope"]
+        place = f["scope"]
+        year_lo, year_hi = f["year_lo"], f["year_hi"]
+        monthly = _monthly_series(nat, panel, sido, year_lo, year_hi)
+        ev_col = c_ev if sido is None else panel_ev
+        kwh_col = c_kwh if sido is None else panel_kwh
         st.caption(
-            f"비교 구간: 2024년 1–{cmp['months']}월 vs 2025년 1–{cmp['months']}월. "
-            "실제 가동 = 환경부 공공급속 중 충전 실적이 있는 기기."
+            f"{place} · {year_lo}–{year_hi}년. 왼쪽은 전기차 등록, 오른쪽은 충전량입니다."
         )
-        m1, m2, m3 = st.columns(3)
-        m1.metric("전기차 등록", f"{cmp['ev_yoy']:+.1f}%", border=True)
-        m2.metric("실제 가동", f"{cmp['active_yoy']:+.1f}%", border=True)
-        m3.metric(
-            "공공급속 충전량",
-            f"{cmp['kwh_yoy']:+.1f}%",
-            help=f"같은 기간 합계 약 {cmp['kwh_2025'] / 1e6:,.1f} GWh",
-            border=True,
-        )
+        with st.container(border=True):
+            if monthly.empty:
+                st.warning("선택한 기간에 월별 데이터가 없습니다.")
+            else:
+                dual_df = monthly[[c_date, ev_col, kwh_col]].rename(
+                    columns={ev_col: "전기차", kwh_col: "충전량"}
+                )
+                _chart(
+                    dual_axis_line(
+                        dual_df,
+                        c_date,
+                        "전기차",
+                        "충전량",
+                        left_name="전기차 (대)",
+                        right_name="충전량 (kWh)",
+                        height=420,
+                    )
+                )
 
-        b1, b2, b3 = st.columns(3)
-        with b1, st.container(border=True):
-            st.markdown("**전기차 등록**")
-            _chart(
-                paired_year_bars(
-                    cmp["ev_2024"],
-                    cmp["ev_2025"],
-                    yoy_pct=cmp["ev_yoy"],
-                    unit="대",
-                    months=cmp["months"],
-                )
+    elif page == "이용 부담":
+        st.markdown("### 어디에 이용 부담이 큰가?")
+        st.caption("이용 부담 = 실제 이용된 충전기 1기당 충전량. 숫자가 클수록 한 대가 바쁩니다.")
+        with st.container(border=True):
+            st.markdown("**이 그래프 필터**")
+            f = _filters(
+                "burden",
+                year_opts=year_opts,
+                default_year=default_map_year,
             )
-        with b2, st.container(border=True):
-            st.markdown("**실제 가동**")
-            _chart(
-                paired_year_bars(
-                    cmp["active_2024"],
-                    cmp["active_2025"],
-                    yoy_pct=cmp["active_yoy"],
-                    unit="기",
-                    months=cmp["months"],
-                )
-            )
-        with b3, st.container(border=True):
-            st.markdown("**공공급속 충전량**")
-            _chart(
-                paired_year_bars(
-                    cmp["kwh_2024"] / 1e6,
-                    cmp["kwh_2025"] / 1e6,
-                    yoy_pct=cmp["kwh_yoy"],
-                    unit="GWh",
-                    months=cmp["months"],
-                )
-            )
-
-        st.info(
-            f"**읽을 점:** {place} 전기차는 **{cmp['ev_yoy']:+.1f}%** 늘었는데 "
-            f"실제 가동은 **{cmp['active_yoy']:+.1f}%**, 충전량은 **{cmp['kwh_yoy']:+.1f}%**입니다.",
-            icon=":material/ev_station:",
+        sido = None if f["scope"] == "전국" else f["scope"]
+        _map_panel(
+            master,
+            f["year"],
+            burden_metric,
+            sido,
+            high_is_priority=True,
+            caption="색이 진할수록 충전기 한 대가 더 많이 쓰입니다. 상위 약 25%가 부담이 큰 시·도입니다.",
         )
 
-    with st.container(border=True):
-        st.markdown(f"**월별 추이 · {place} · {year_lo}–{year_hi}년**")
-        st.caption("왼쪽=전기차 등록, 오른쪽=공공급속 충전량.")
-        if monthly.empty:
-            st.warning("선택한 기간에 월별 데이터가 없습니다.")
-        else:
-            dual_df = monthly[[c_date, ev_col, kwh_col]].rename(
-                columns={ev_col: "전기차", kwh_col: "충전량"}
+    elif page == "전기차 대비 충전기":
+        st.markdown("### 전기차 수에 비해 실제 이용된 충전기가 어디가 부족한가?")
+        st.caption(
+            "전기차 1,000대당 실제 이용된 충전기 수입니다. 숫자가 낮을수록 충전기가 부족합니다."
+        )
+        with st.container(border=True):
+            st.markdown("**이 그래프 필터**")
+            f = _filters(
+                "supply",
+                year_opts=year_opts,
+                default_year=default_map_year,
             )
-            _chart(
-                dual_axis_line(
-                    dual_df,
-                    c_date,
-                    "전기차",
-                    "충전량",
-                    left_name="전기차 (대)",
-                    right_name="공공급속 충전량 (kWh)",
-                    height=400,
-                )
+        sido = None if f["scope"] == "전국" else f["scope"]
+        _map_panel(
+            master,
+            f["year"],
+            supply_metric,
+            sido,
+            high_is_priority=False,
+            caption="색이 옅을수록 전기차 수에 비해 실제 이용된 충전기가 적습니다.",
+        )
+
+    elif page == "종합":
+        st.markdown("### 어디에 배치를 우선하는 것이 바람직한가?")
+        with st.container(border=True):
+            st.markdown("**이 그래프 필터**")
+            f = _filters(
+                "sum",
+                year_opts=year_opts,
+                default_year=default_map_year,
             )
-
-    st.divider()
-
-    # ------------------------------------------------------------------
-    # 2) 지도
-    # ------------------------------------------------------------------
-    st.markdown("### 2. 시·도 이용 부담 지도")
-    st.caption(f"{metric_help} Q4 = 17시·도 중 상위 약 25%.")
-    if year == 2025:
-        st.caption("2025년은 1–8월 관측입니다.")
-
-    map_data = rank_for_map(master, year, map_metric)
-    top_priority = []
-    selected_rank = None
-    selected_n = None
-    if map_data.empty:
-        st.warning(f"{year}년 지도 데이터가 없습니다.")
-    else:
-        geojson = load_geojson()
-        map_col, bar_col = st.columns([1.25, 1])
-        with map_col, st.container(border=True):
-            st.markdown(f"**시·도 지도 · {year}년 · {metric_label}**")
-            _chart(choropleth(geojson, map_data, map_metric, year))
-        with bar_col, st.container(border=True):
-            st.markdown("**같은 지표 순위**")
-            sc = _sido_col(map_data)
-            _chart(
-                sido_hbar(
-                    map_data[sc],
-                    map_data[map_metric],
-                    color=COLORS["charge"],
-                    unit="",
-                    height=520,
-                    highlight=sido,
-                )
-            )
-
-        sc = _sido_col(map_data)
-        ranked = map_data.sort_values(map_metric, ascending=not high_is_priority)
-        top_priority = ranked.head(5)[sc].tolist()
-        selected_n = len(ranked)
+        year = f["year"]
+        sido = None if f["scope"] == "전국" else f["scope"]
+        both, burden_only, supply_only = _priority_groups(master, year)
+        st.caption(
+            f"{year}년 기준. 이용 부담이 큰 곳과, 전기차 대비 실제 이용된 충전기가 부족한 곳을 겹쳐 봅니다."
+        )
+        g1, g2, g3 = st.columns(3)
+        with g1, st.container(border=True):
+            st.markdown("**둘 다**")
+            st.write(" · ".join(both) if both else "해당 없음")
+        with g2, st.container(border=True):
+            st.markdown("**이용 부담만 크다**")
+            st.write(" · ".join(burden_only) if burden_only else "해당 없음")
+        with g3, st.container(border=True):
+            st.markdown("**전기차 대비 충전기만 부족하다**")
+            st.write(" · ".join(supply_only) if supply_only else "해당 없음")
+        where = ", ".join(both) if both else "이용 부담과 충전기 부족이 겹치는 시·도"
         if sido:
-            hit = ranked[ranked[sc] == sido]
-            if not hit.empty:
-                selected_rank = int(list(ranked[sc]).index(sido) + 1)
-
-        if sido and selected_rank:
-            st.info(
-                f"**읽을 점:** {year}년 {metric_label}에서 **{sido}는 {selected_rank}위 / {selected_n}곳**입니다. "
-                f"상위권은 {', '.join(top_priority)}입니다.",
-                icon=":material/map:",
+            bits = []
+            if sido in both:
+                bits.append("둘 다에 들어갑니다")
+            elif sido in burden_only:
+                bits.append("이용 부담만 큽니다")
+            elif sido in supply_only:
+                bits.append("전기차 대비 충전기만 부족합니다")
+            else:
+                bits.append("두 상위 목록에는 없습니다")
+            st.success(
+                f"{year}년 **{sido}**는 {bits[0]}. "
+                f"둘 다인 곳은 **{where}**이므로, 여기서부터 배치를 우선하는 것이 바람직합니다.",
+                icon=":material/flag:",
             )
         else:
-            st.info(
-                f"**읽을 점:** {year}년 {metric_label} 상위는 **{', '.join(top_priority)}**입니다.",
-                icon=":material/map:",
+            extra = []
+            if burden_only:
+                extra.append(f"이용 부담만 큰 곳은 {', '.join(burden_only)}")
+            if supply_only:
+                extra.append(f"전기차 대비 충전기만 부족한 곳은 {', '.join(supply_only)}")
+            tail = " ".join(extra)
+            st.success(
+                f"{year}년 둘 다 부족한 곳은 **{where}**입니다. {tail} "
+                "둘 다인 곳부터 배치를 우선하는 것이 바람직합니다.",
+                icon=":material/flag:",
             )
-
-    # ------------------------------------------------------------------
-    # 2b) 신호 겹침
-    # ------------------------------------------------------------------
-    q4 = _q4_signals(master, year, year_col, sido_col_m, burden_metric)
-    if not q4.empty:
-        st.markdown(f"### 신호가 겹치는가 — {year}년 부담 Q4")
-        st.caption("기당 충전량 · EV/실제 가동 1기 · EV 3년 연평균 성장률. 선택한 시·도는 파란 막대.")
-        names = q4[sido_col_m].astype(str).tolist()
-        s1, s2, s3 = st.columns(3)
-        with s1, st.container(border=True):
-            st.markdown("**기당 충전량 (kWh)**")
-            _chart(
-                sido_hbar(
-                    names,
-                    q4[burden_metric],
-                    color=COLORS["active"],
-                    unit="kWh",
-                    highlight=sido,
-                )
-            )
-        with s2, st.container(border=True):
-            st.markdown("**EV / 실제 가동 1기**")
-            _chart(
-                sido_hbar(
-                    names,
-                    q4["ev_per_active"],
-                    color=COLORS["charge"],
-                    unit="대/기",
-                    highlight=sido,
-                )
-            )
-        with s3, st.container(border=True):
-            st.markdown("**EV 3년 CAGR**")
-            cagr_pct = (q4["cagr"] * 100).where(q4["cagr"].notna(), 0)
-            _chart(
-                sido_hbar(names, cagr_pct, color=COLORS["ev"], unit="%", highlight=sido)
-            )
-        if sido:
-            in_q4 = sido in names
-            st.caption(
-                f"{sido}는 {year}년 부담 Q4에 **{'들어갑니다' if in_q4 else '들어가지 않습니다'}**."
-            )
-
-    if fast_stock is not None:
-        with st.expander("공급 배경 · 차지인포 급속 비중 (본편 결론 KPI 아님)"):
-            st.caption(
-                f"기준 {fast_stock['as_of']}. 공공+민간 전체 구축에서 급속 비율입니다."
-            )
-            r8 = (
-                fast_stock["regions"]
-                .set_index("권역")[["급속 비중(%)"]]
-                .sort_values("급속 비중(%)")
-            )
-            _chart(category_bar_chart(r8))
-            st.caption(
-                f"전국 급속 비중 {fast_stock['fast_share']:.1f}% "
-                f"(완속:급속 ≈ {fast_stock['slow_fast']:.1f}:1)."
-            )
-
-    st.divider()
-
-    # ------------------------------------------------------------------
-    # 3) 종합
-    # ------------------------------------------------------------------
-    st.markdown("### 3. 종합")
-    q4_names = q4[sido_col_m].astype(str).tolist() if not q4.empty else top_priority
-    where = ", ".join(q4_names) if q4_names else "이용 부담이 큰 시·도"
-    in_q4 = bool(sido) and sido in q4_names
-    if cmp is None:
-        st.success(
-            f"**{where}**는 부담 Q4와 겹침 신호가 모이므로 공공급속 **배치를 우선하는 것이 바람직합니다.**",
-            icon=":material/flag:",
-        )
-    elif sido and selected_rank:
-        line = (
-            f"{sido}는 EV {cmp['ev_yoy']:+.1f}% · 실제 가동 {cmp['active_yoy']:+.1f}% · "
-            f"충전량 {cmp['kwh_yoy']:+.1f}%입니다. {year}년 {metric_label} **{selected_rank}위**. "
-            f"전국 Q4는 **{where}**입니다."
-        )
-        if in_q4:
-            line += f" {sido}도 Q4에 들어가므로 공공급속 **배치를 우선하는 것이 바람직합니다.**"
-        st.success(line, icon=":material/flag:")
-    else:
-        st.success(
-            f"수요(EV {cmp['ev_yoy']:+.1f}%)가 실제 가동({cmp['active_yoy']:+.1f}%)·"
-            f"충전량({cmp['kwh_yoy']:+.1f}%)을 앞섭니다. "
-            f"**{where}**는 부담 Q4와 겹침 신호가 모이므로 공공급속 **배치를 우선하는 것이 바람직합니다.**",
-            icon=":material/flag:",
-        )

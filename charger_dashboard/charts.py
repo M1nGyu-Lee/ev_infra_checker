@@ -35,6 +35,7 @@ COLORS = {
     "charge": "#0F766E",
     "active": "#D97706",
     "muted": "#64748B",
+    "up": "#059669",
     "danger": "#DC2626",
     "palette_slow": "#1D4ED8",
     "palette_fast": "#DC2626",
@@ -251,16 +252,26 @@ def dual_axis_line(df, x_col, left_col, right_col, *, left_name, right_name, hei
     return fig
 
 
-def paired_year_bars(v2024, v2025, *, yoy_pct, unit, height=260, months=8):
-    """동기간 2024 vs 2025 막대 하나. 발표 YoY 차트와 같은 읽기."""
+def paired_year_bars(
+    v_prev,
+    v_curr,
+    *,
+    yoy_pct,
+    unit,
+    label_prev,
+    label_curr,
+    height=260,
+):
+    """전년 vs 선택 연도 막대. 오른쪽에 전년 대비 % (오름=녹색, 내림=빨강)."""
+    yoy_color = COLORS["up"] if yoy_pct >= 0 else COLORS["danger"]
     fig = go.Figure(
         data=[
             go.Bar(
-                x=[f"2024 1–{months}월", f"2025 1–{months}월"],
-                y=[v2024, v2025],
+                x=[label_prev, label_curr],
+                y=[v_prev, v_curr],
                 marker_color=[COLORS["ev"], COLORS["charge"]],
                 width=0.55,
-                text=[f"{v2024:,.0f}", f"{v2025:,.0f}"],
+                text=[f"{v_prev:,.0f}", f"{v_curr:,.0f}"],
                 textposition="outside",
                 hovertemplate="%{x}<br>%{y:,.0f} " + unit + "<extra></extra>",
             )
@@ -277,21 +288,23 @@ def paired_year_bars(v2024, v2025, *, yoy_pct, unit, height=260, months=8):
         annotations=[
             dict(
                 x=1,
-                y=v2025,
+                y=v_curr,
                 text=f"{yoy_pct:+.1f}%",
                 showarrow=False,
                 yshift=18,
-                font=dict(size=13, color=COLORS["active"]),
+                font=dict(size=13, color=yoy_color),
             )
         ],
     )
     return fig
 
 
-def sido_hbar(names, values, *, color=None, unit="", height=320, highlight=None):
-    """시·도 가로 막대. 값이 큰 시·도가 위에 오도록 정렬."""
+def sido_hbar(
+    names, values, *, color=None, unit="", height=320, highlight=None, higher_on_top=True
+):
+    """시·도 가로 막대. 기본은 값이 큰 시·도가 위."""
     plot = pd.DataFrame({"sido": list(names), "value": list(values)})
-    plot = plot.sort_values("value", ascending=True)
+    plot = plot.sort_values("value", ascending=higher_on_top)
     base = color or COLORS["charge"]
     bar_colors = [
         COLORS["ev"] if highlight and str(name) == str(highlight) else base
