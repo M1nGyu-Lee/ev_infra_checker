@@ -222,8 +222,7 @@ def render():
 
     st.info(
         f"**읽을 점:** 전기차는 **{cmp['ev_yoy']:+.1f}%** 늘었는데 "
-        f"실제 가동은 **{cmp['active_yoy']:+.1f}%**, 충전량은 **{cmp['kwh_yoy']:+.1f}%**입니다. "
-        "총량만으로 충분을 단정하기 어렵습니다.",
+        f"실제 가동은 **{cmp['active_yoy']:+.1f}%**, 충전량은 **{cmp['kwh_yoy']:+.1f}%**입니다.",
         icon=":material/ev_station:",
     )
 
