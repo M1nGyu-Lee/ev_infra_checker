@@ -1,6 +1,6 @@
 """발표용 정책 브리핑.
 
-스토리: 전국 괴리 → 부담 지도 → 신호 겹침 → 우선 점검.
+스토리: 전국 괴리 → 부담 지도 → 신호 겹침 → 배치 방향.
 시연: 시·도·연도·기간을 바꾸면 같은 그래프가 따라간다.
 """
 
@@ -440,7 +440,7 @@ def render():
     in_q4 = bool(sido) and sido in q4_names
     if cmp is None:
         st.success(
-            f"**{where}**는 부담 Q4와 겹침 신호가 모이므로 공공급속 **우선 점검이 바람직합니다.**",
+            f"**{where}**는 부담 Q4와 겹침 신호가 모이므로 공공급속 **배치를 우선하는 것이 바람직합니다.**",
             icon=":material/flag:",
         )
     elif sido and selected_rank:
@@ -450,12 +450,12 @@ def render():
             f"전국 Q4는 **{where}**입니다."
         )
         if in_q4:
-            line += f" {sido}도 Q4에 들어가므로 공공급속 **우선 점검이 바람직합니다.**"
+            line += f" {sido}도 Q4에 들어가므로 공공급속 **배치를 우선하는 것이 바람직합니다.**"
         st.success(line, icon=":material/flag:")
     else:
         st.success(
             f"수요(EV {cmp['ev_yoy']:+.1f}%)가 실제 가동({cmp['active_yoy']:+.1f}%)·"
             f"충전량({cmp['kwh_yoy']:+.1f}%)을 앞섭니다. "
-            f"**{where}**는 부담 Q4와 겹침 신호가 모이므로 공공급속 **우선 점검이 바람직합니다.**",
+            f"**{where}**는 부담 Q4와 겹침 신호가 모이므로 공공급속 **배치를 우선하는 것이 바람직합니다.**",
             icon=":material/flag:",
         )
