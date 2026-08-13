@@ -251,12 +251,12 @@ def dual_axis_line(df, x_col, left_col, right_col, *, left_name, right_name, hei
     return fig
 
 
-def paired_year_bars(v2024, v2025, *, yoy_pct, unit, height=260):
+def paired_year_bars(v2024, v2025, *, yoy_pct, unit, height=260, months=8):
     """동기간 2024 vs 2025 막대 하나. 발표 YoY 차트와 같은 읽기."""
     fig = go.Figure(
         data=[
             go.Bar(
-                x=["2024 1–8월", "2025 1–8월"],
+                x=[f"2024 1–{months}월", f"2025 1–{months}월"],
                 y=[v2024, v2025],
                 marker_color=[COLORS["ev"], COLORS["charge"]],
                 width=0.55,
@@ -288,17 +288,22 @@ def paired_year_bars(v2024, v2025, *, yoy_pct, unit, height=260):
     return fig
 
 
-def sido_hbar(names, values, *, color=None, unit="", height=320):
+def sido_hbar(names, values, *, color=None, unit="", height=320, highlight=None):
     """시·도 가로 막대. 값이 큰 시·도가 위에 오도록 정렬."""
     plot = pd.DataFrame({"sido": list(names), "value": list(values)})
     plot = plot.sort_values("value", ascending=True)
+    base = color or COLORS["charge"]
+    bar_colors = [
+        COLORS["ev"] if highlight and str(name) == str(highlight) else base
+        for name in plot["sido"]
+    ]
     fig = go.Figure(
         data=[
             go.Bar(
                 x=plot["value"],
                 y=plot["sido"],
                 orientation="h",
-                marker_color=color or COLORS["charge"],
+                marker_color=bar_colors,
                 hovertemplate="%{y}<br>%{x:,.1f} " + unit + "<extra></extra>",
             )
         ]
