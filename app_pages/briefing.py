@@ -188,6 +188,38 @@ def _q4_names(df, value_col, sido_col, *, higher_is_worse):
     return hit[sido_col].astype(str).tolist()
 
 
+def _sido_ranks(df, burden_c, supply_c, sido_col):
+    """이용 부담은 클수록 1위, 전기차 대비 충전기는 적을수록 1위(부족)."""
+    n = int(df[sido_col].nunique())
+    b_rank = df[burden_c].rank(ascending=False, method="min").astype(int)
+    s_rank = df[supply_c].rank(ascending=True, method="min").astype(int)
+    out = {}
+    for idx, row in df.iterrows():
+        name = str(row[sido_col])
+        out[name] = {
+            "n": n,
+            "burden_rank": int(b_rank.loc[idx]),
+            "supply_rank": int(s_rank.loc[idx]),
+        }
+    return out
+
+
+def _rank_bits(name, ranks):
+    r = ranks.get(name)
+    if not r:
+        return ""
+    n = r["n"]
+    return (
+        f"이용 부담 **{r['burden_rank']}위/{n}**, "
+        f"전기차 대비 충전기 **{r['supply_rank']}위/{n}**"
+    )
+
+
+def _rank_line(name, ranks):
+    bits = _rank_bits(name, ranks)
+    return f"{name}  ·  {bits}" if bits else name
+
+
 def _priority_groups(master, year):
     yc = _year_col(master)
     sc = _sido_col(master)
@@ -195,13 +227,13 @@ def _priority_groups(master, year):
     supply_c = _col(master, "fast_per_1000_ev_active", "EV천대당활성급속")
     df = master[master[yc] == year].dropna(subset=[burden_c, supply_c, sc]).copy()
     if df.empty:
-        return [], [], []
+        return [], [], [], {}
     busy = _q4_names(df, burden_c, sc, higher_is_worse=True)
     tight = _q4_names(df, supply_c, sc, higher_is_worse=False)
     both = [s for s in busy if s in tight]
     burden_only = [s for s in busy if s not in tight]
     supply_only = [s for s in tight if s not in busy]
-    return both, burden_only, supply_only
+    return both, burden_only, supply_only, _sido_ranks(df, burden_c, supply_c, sc)
 
 
 def _chart(fig):
@@ -533,20 +565,29 @@ def render():
             )
         year = f["year"]
         sido = None if f["scope"] == "전국" else f["scope"]
-        both, burden_only, supply_only = _priority_groups(master, year)
+        both, burden_only, supply_only, ranks = _priority_groups(master, year)
+        n = next(iter(ranks.values()))["n"] if ranks else 17
         st.caption(
-            f"{year}년 기준. 이용 부담이 큰 곳과, 전기차 대비 실제 이용된 충전기가 부족한 곳을 겹쳐 봅니다."
+            f"{year}년 · {n}개 시·도. "
+            "이용 부담은 1기당 충전량이 클수록 앞 순위, "
+            "전기차 대비 충전기는 1,000대당 기가 적을수록 앞 순위(부족)입니다."
         )
+
+        def _block(title, names):
+            st.markdown(f"**{title}**")
+            if not names:
+                st.write("해당 없음")
+                return
+            for name in names:
+                st.markdown(_rank_line(name, ranks))
+
         g1, g2, g3 = st.columns(3)
         with g1, st.container(border=True):
-            st.markdown("**둘 다**")
-            st.write(" · ".join(both) if both else "해당 없음")
+            _block("둘 다", both)
         with g2, st.container(border=True):
-            st.markdown("**이용 부담만 크다**")
-            st.write(" · ".join(burden_only) if burden_only else "해당 없음")
+            _block("이용 부담만 크다", burden_only)
         with g3, st.container(border=True):
-            st.markdown("**전기차 대비 충전기만 부족하다**")
-            st.write(" · ".join(supply_only) if supply_only else "해당 없음")
+            _block("전기차 대비 충전기만 부족하다", supply_only)
         where = ", ".join(both) if both else "이용 부담과 충전기 부족이 겹치는 시·도"
         if sido:
             bits = []
@@ -558,17 +599,19 @@ def render():
                 bits.append("전기차 대비 충전기만 부족합니다")
             else:
                 bits.append("두 상위 목록에는 없습니다")
+            rank_bit = _rank_bits(sido, ranks)
+            rank_clause = f" {rank_bit}." if rank_bit else ""
             st.success(
-                f"{year}년 **{sido}**는 {bits[0]}. "
+                f"{year}년 **{sido}**는 {bits[0]}.{rank_clause} "
                 f"둘 다인 곳은 **{where}**이므로, 여기서부터 배치를 우선하는 것이 바람직합니다.",
                 icon=":material/flag:",
             )
         else:
             extra = []
             if burden_only:
-                extra.append(f"이용 부담만 큰 곳은 {', '.join(burden_only)}")
+                extra.append("이용 부담만 큰 곳은 " + ", ".join(burden_only))
             if supply_only:
-                extra.append(f"전기차 대비 충전기만 부족한 곳은 {', '.join(supply_only)}")
+                extra.append("전기차 대비 충전기만 부족한 곳은 " + ", ".join(supply_only))
             tail = " ".join(extra)
             st.success(
                 f"{year}년 둘 다 부족한 곳은 **{where}**입니다. {tail} "
