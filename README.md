@@ -4,7 +4,6 @@
 공공 급속 충전기를 중심으로, 전국 17개 시·도의 **이용 부담**과 **충전 여력**을 비교하고 **공공급속 배치 방향**을 제시하는 Streamlit 대시보드입니다.
 
 - GitHub: https://github.com/M1nGyu-Lee/ev_infra_checker  
-- 발표 덱(원본): `Charger_Infra_Checker_Briefing_live.pptx` (25장)  
 - 앱 기본 진입: **발표·정책 브리핑**
 
 ---
