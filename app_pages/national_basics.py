@@ -5,7 +5,7 @@ import streamlit as st
 
 from charger_dashboard.data import (
     available_years,
-    load_chargeinfo_region_stock,
+    load_me_charger_status_region_stock,
     load_ev_monthly,
     load_master,
     national_year,
@@ -32,11 +32,11 @@ def render():
     )
 
     try:
-        chargeinfo_stock = load_chargeinfo_region_stock()
-        has_chargeinfo = True
+        me_charger_status_stock = load_me_charger_status_region_stock()
+        has_me_charger_status = True
     except FileNotFoundError:
-        has_chargeinfo = False
-        chargeinfo_stock = pd.DataFrame()
+        has_me_charger_status = False
+        me_charger_status_stock = pd.DataFrame()
 
     master = load_master()
     ev_monthly = load_ev_monthly()
@@ -100,13 +100,13 @@ def render():
                 ["active_charger_count"]
             ].rename(columns={"active_charger_count": "활성기 (기)"})
             st.line_chart(active)
-        if has_chargeinfo:
+        if has_me_charger_status:
             nat_ci = (
-                chargeinfo_stock[chargeinfo_stock["region_name"] == "전국"]
+                me_charger_status_stock[me_charger_status_stock["region_name"] == "전국"]
                 .set_index("year")[["charger_stock"]]
                 .rename(columns={"charger_stock": "누적 (기)"})
             )
-            st.markdown("**차지인포 전국 누적 충전기 (급속+완속 합계)**")
+            st.markdown("**환경부 급·완속 현황 전국 누적 충전기 (급속+완속 합계)**")
             st.line_chart(nat_ci)
             st.caption("2026년은 연중 누적(partial)일 수 있습니다. 상세는 2순위 탭.")
 
@@ -183,7 +183,7 @@ def render():
             | EV 등록 | 2019-01부터 2026-06까지 (연도는 연말, 없으면 최종월) |
             | 환경부 공공급속 충전량 | 2019-01부터 2025-08까지 · 2025는 **partial** |
             | 환경부 설치 재고 | 2022년까지 · 이후 `source_stale` |
-            | 차지인포 누적 | 연간 표·월별 xls · 급·완속 분리 가능 |
+            | 환경부 급·완속 현황 누적 | 연간 표·월별 xls · 급·완속 분리 가능 |
             """
         )
         status_tbl = national[

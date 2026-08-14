@@ -372,10 +372,10 @@ def year_selector(years, *, key, default=None, label="기준연도"):
     return int(st.selectbox(label, years, index=idx, key=key))
 
 
-def chargeinfo_region_label(name):
-    from charger_dashboard.data import CHARGEINFO_REGION_LABEL
+def me_charger_status_region_label(name):
+    from charger_dashboard.data import ME_CHARGER_STATUS_REGION_LABEL
 
-    return CHARGEINFO_REGION_LABEL.get(str(name), str(name))
+    return ME_CHARGER_STATUS_REGION_LABEL.get(str(name), str(name))
 
 
 def hint_badge_html(hint):

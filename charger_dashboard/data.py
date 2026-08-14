@@ -19,8 +19,8 @@ SIDO_ORDER = [
     "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
 ]
 
-# Chargeinfo packs multiple provinces into 8 mixed regions (city + province groups).
-CHARGEINFO_REGION_LABEL = {
+# 환경부 급·완속 현황 API 집계 권역 표시명 (시·도 코드 조회 후 권역 표기).
+ME_CHARGER_STATUS_REGION_LABEL = {
     "서울": "서울",
     "인천": "인천",
     "제주": "제주",
@@ -179,7 +179,7 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     # 동일 영문키로 중복되면 첫 컬럼만 유지
     if out.columns.duplicated().any():
         out = out.loc[:, ~out.columns.duplicated()].copy()
-    # ref_ym 별칭: 일부 차지인포/월 표는 year_month 를 ref_ym 로도 씀
+    # ref_ym 별칭: 일부 환경부 급·완속 현황/월 표는 year_month 를 ref_ym 로도 씀
     if "year_month" in out.columns and "ref_ym" not in out.columns:
         out["ref_ym"] = out["year_month"]
     if "ref_ym" in out.columns and "year_month" not in out.columns:
@@ -319,67 +319,67 @@ def load_forecast_methodology_text():
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_region_stock():
+def load_me_charger_status_region_stock():
     _ = DATA_SCHEMA_VERSION
-    path = PROCESSED / "chargeinfo_region_stock_annual.csv"
+    path = PROCESSED / "me_charger_status_region_stock_annual.csv"
     return _read_processed_csv(
         path,
-        f"차지인포 누적 데이터 없음: {path}. "
-        "python scripts/preprocess_chargeinfo_stock.py를 실행하세요.",
+        f"환경부 급·완속 현황 누적 데이터 없음: {path}. "
+        "python scripts/preprocess_me_charger_status_stock.py를 실행하세요.",
     )
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_region_yoy():
-    path = PROCESSED / "chargeinfo_region_stock_yoy.csv"
+def load_me_charger_status_region_yoy():
+    path = PROCESSED / "me_charger_status_region_stock_yoy.csv"
     return _read_processed_csv(
         path,
-        f"차지인포 YoY 없음: {path}. "
-        "python scripts/preprocess_chargeinfo_stock.py를 실행하세요.",
+        f"환경부 급·완속 현황 YoY 없음: {path}. "
+        "python scripts/preprocess_me_charger_status_stock.py를 실행하세요.",
     )
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_region_stock_monthly():
+def load_me_charger_status_region_stock_monthly():
     _ = DATA_SCHEMA_VERSION
-    path = PROCESSED / "chargeinfo_region_stock_monthly.csv"
+    path = PROCESSED / "me_charger_status_region_stock_monthly.csv"
     return _read_processed_csv(
         path,
-        f"차지인포 월별 누적 없음: {path}. "
-        "python scripts/preprocess_chargeinfo_monthly.py를 실행하세요.",
+        f"환경부 급·완속 현황 월별 누적 없음: {path}. "
+        "python scripts/preprocess_me_charger_status_monthly.py를 실행하세요.",
     )
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_slow_fast_ratio_monthly():
+def load_me_charger_status_slow_fast_ratio_monthly():
     _ = DATA_SCHEMA_VERSION
-    path = PROCESSED / "chargeinfo_region_slow_fast_ratio_monthly.csv"
+    path = PROCESSED / "me_charger_status_slow_fast_ratio_monthly.csv"
     return _read_processed_csv(
         path,
-        f"차지인포 완속/급속 비율 없음: {path}. "
-        "python scripts/preprocess_chargeinfo_monthly.py를 실행하세요.",
+        f"환경부 급·완속 현황 완속/급속 비율 없음: {path}. "
+        "python scripts/preprocess_me_charger_status_monthly.py를 실행하세요.",
     )
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_ev_per_charger_wide():
+def load_me_charger_status_ev_per_charger_wide():
     _ = DATA_SCHEMA_VERSION
-    path = PROCESSED / "chargeinfo_ev_per_charger_ratio_wide.csv"
+    path = PROCESSED / "me_charger_status_ev_per_charger_ratio_wide.csv"
     return _read_processed_csv(
         path,
-        f"차지인포 EV 1대당 보급률 없음: {path}. "
-        "python scripts/preprocess_chargeinfo_ev_ratio.py를 실행하세요.",
+        f"환경부 급·완속 현황 EV 1대당 보급률 없음: {path}. "
+        "python scripts/preprocess_me_charger_status_ev_ratio.py를 실행하세요.",
     )
 
 
 @st.cache_data(show_spinner=False)
-def load_chargeinfo_ev_per_charger_avg():
+def load_me_charger_status_ev_per_charger_avg():
     _ = DATA_SCHEMA_VERSION
-    path = PROCESSED / "chargeinfo_ev_per_charger_ratio_avg.csv"
+    path = PROCESSED / "me_charger_status_ev_per_charger_ratio_avg.csv"
     return _read_processed_csv(
         path,
-        f"차지인포 EV 1대당 평균 없음: {path}. "
-        "python scripts/preprocess_chargeinfo_ev_ratio.py를 실행하세요.",
+        f"환경부 급·완속 현황 EV 1대당 평균 없음: {path}. "
+        "python scripts/preprocess_me_charger_status_ev_ratio.py를 실행하세요.",
     )
 
 

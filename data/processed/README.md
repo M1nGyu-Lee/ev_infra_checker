@@ -17,20 +17,20 @@ python scripts/build_analysis_tables.py
 | `ev_kepco_monthly.csv` | 시·도×기준일 | `ref_date`, `ref_year`, `ref_month`, `ref_ym`, `sido_short`, `ev_count` |
 | `charger_facility.csv` | 충전기 | `install_year`, `sido_short`, `charger_class_lcl`, `operator_lcl` |
 | `charge_public_fast_monthly.csv` | 충전기×연월 | `sido_short`, `year`, `month`, `year_month`, `station_id`, `charger_id`, `charge_kwh`, `charge_count`, `charge_hours` |
-| `chargeinfo_region_stock_annual.csv` | 권역×연도 | `year`, `region_name`, `charger_stock`, `share_pct`, `data_status` |
-| `chargeinfo_region_stock_yoy.csv` | 권역×연도 | `year`, `region_name`, `charger_stock`, `yoy_pct`, `data_status` |
-| `chargeinfo_region_stock_monthly.csv` | 권역×월×속도 | `ref_ym`, `year`, `month`, `region_name`, `charger_class_lcl`, `charger_stock`, `share_pct` |
-| `chargeinfo_region_slow_fast_ratio_monthly.csv` | 권역×월 | `ref_ym`, `region_name`, `fast`, `slow`, `slow_fast_ratio`, `fast_share_pct` |
-| `chargeinfo_ev_per_charger_ratio_monthly.csv` | 권역×월×지표 | `metric`, `ref_ym`, `region_name`, `chargers_per_ev`, `region_share_pct` |
-| `chargeinfo_ev_per_charger_ratio_wide.csv` | 권역×월 | `fast_per_ev`, `slow_per_ev`, `total_per_ev`, `slow_fast_intensity_ratio` |
-| `chargeinfo_ev_per_charger_ratio_avg.csv` | 지표×월 | `metric`, `ref_ym`, `avg_chargers_per_ev` |
+| `me_charger_status_region_stock_annual.csv` | 권역×연도 | `year`, `region_name`, `charger_stock`, `share_pct`, `data_status` |
+| `me_charger_status_region_stock_yoy.csv` | 권역×연도 | `year`, `region_name`, `charger_stock`, `yoy_pct`, `data_status` |
+| `me_charger_status_region_stock_monthly.csv` | 권역×월×속도 | `ref_ym`, `year`, `month`, `region_name`, `charger_class_lcl`, `charger_stock`, `share_pct` |
+| `me_charger_status_slow_fast_ratio_monthly.csv` | 권역×월 | `ref_ym`, `region_name`, `fast`, `slow`, `slow_fast_ratio`, `fast_share_pct` |
+| `me_charger_status_ev_per_charger_ratio_monthly.csv` | 권역×월×지표 | `metric`, `ref_ym`, `region_name`, `chargers_per_ev`, `region_share_pct` |
+| `me_charger_status_ev_per_charger_ratio_wide.csv` | 권역×월 | `fast_per_ev`, `slow_per_ev`, `total_per_ev`, `slow_fast_intensity_ratio` |
+| `me_charger_status_ev_per_charger_ratio_avg.csv` | 지표×월 | `metric`, `ref_ym`, `avg_chargers_per_ev` |
 
-조인 키: `sido_short` (+ `year` / `ref_ym` / `year_month`). 차지인포는 **8권역**이라 시·도 마스터와 직접 조인하지 않습니다.
+조인 키: `sido_short` (+ `year` / `ref_ym` / `year_month`). 환경부 급·완속 현황 API 집계 표는 권역 grain이라 시·도 마스터와 직접 조인하지 않습니다.
 
-차지인포 재생성:
+환경부 급·완속 현황 재생성:
 
 ```powershell
-python scripts/preprocess_chargeinfo_stock.py
-python scripts/preprocess_chargeinfo_monthly.py
-python scripts/preprocess_chargeinfo_ev_ratio.py
+python scripts/preprocess_me_charger_status_stock.py
+python scripts/preprocess_me_charger_status_monthly.py
+python scripts/preprocess_me_charger_status_ev_ratio.py
 ```

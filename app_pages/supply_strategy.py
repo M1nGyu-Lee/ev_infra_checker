@@ -7,14 +7,14 @@ from charger_dashboard.charts import category_bar_chart
 from charger_dashboard.data import (
     available_years,
     load_charge_annual,
-    load_chargeinfo_ev_per_charger_avg,
-    load_chargeinfo_ev_per_charger_wide,
-    load_chargeinfo_region_stock_monthly,
-    load_chargeinfo_slow_fast_ratio_monthly,
+    load_me_charger_status_ev_per_charger_avg,
+    load_me_charger_status_ev_per_charger_wide,
+    load_me_charger_status_region_stock_monthly,
+    load_me_charger_status_slow_fast_ratio_monthly,
     load_master,
 )
 from charger_dashboard.ui import (
-    chargeinfo_region_label,
+    me_charger_status_region_label,
     dataframe_download,
     insight_callout,
     priority_banner,
@@ -52,7 +52,7 @@ def _fast_share_insight(cur, selected_ref, prev_ref):
         parts.append("직전 스냅샷이 없어 비중 변화는 아래 표의 절대 비중만 참고하세요.")
 
     parts.append(
-        "차지인포 **8권역 누적 설치 대수** 비중이며, 충전 이용·환경부 공공급속과는 별도입니다."
+        "환경부 급·완속 현황 **8권역 누적 설치 대수** 비중이며, 충전 이용·환경부 공공급속과는 별도입니다."
     )
     return " ".join(parts)
 
@@ -65,25 +65,25 @@ def render():
     scope_notice()
 
     try:
-        chargeinfo_monthly = load_chargeinfo_region_stock_monthly()
-        chargeinfo_ratio = load_chargeinfo_slow_fast_ratio_monthly()
-        has_chargeinfo_monthly = True
+        me_charger_status_monthly = load_me_charger_status_region_stock_monthly()
+        me_charger_status_ratio = load_me_charger_status_slow_fast_ratio_monthly()
+        has_me_charger_status_monthly = True
     except FileNotFoundError:
-        has_chargeinfo_monthly = False
-        chargeinfo_monthly = pd.DataFrame()
-        chargeinfo_ratio = pd.DataFrame()
+        has_me_charger_status_monthly = False
+        me_charger_status_monthly = pd.DataFrame()
+        me_charger_status_ratio = pd.DataFrame()
 
     try:
-        chargeinfo_ev_wide = load_chargeinfo_ev_per_charger_wide()
-        _ = load_chargeinfo_ev_per_charger_avg()
-        has_chargeinfo_ev_ratio = True
+        me_charger_status_ev_wide = load_me_charger_status_ev_per_charger_wide()
+        _ = load_me_charger_status_ev_per_charger_avg()
+        has_me_charger_status_ev_ratio = True
     except FileNotFoundError:
-        has_chargeinfo_ev_ratio = False
-        chargeinfo_ev_wide = pd.DataFrame()
+        has_me_charger_status_ev_ratio = False
+        me_charger_status_ev_wide = pd.DataFrame()
 
-    if not has_chargeinfo_ev_ratio and not has_chargeinfo_monthly:
+    if not has_me_charger_status_ev_ratio and not has_me_charger_status_monthly:
         st.warning(
-            "차지인포 데이터가 없습니다. `data/raw/chargeinfo/` 확인 후 전처리를 실행하세요.",
+            "환경부 급·완속 현황 데이터가 없습니다. `data/raw/me_charger_status/` 확인 후 전처리를 실행하세요.",
             icon=":material/construction:",
         )
 
@@ -100,7 +100,7 @@ def render():
 
     def _with_region_label(df):
         out = df.copy()
-        out["권역표시"] = out["region_name"].map(chargeinfo_region_label)
+        out["권역표시"] = out["region_name"].map(me_charger_status_region_label)
         return out
 
     tabs = st.tabs(
@@ -117,16 +117,16 @@ def render():
             "읽는 방법",
             "가로=EV 1대당 **급속**, 세로=EV 1대당 **완속**. "
             "중앙값보다 큰지/작은지로 네 칸(사분면)을 나눕니다. "
-            "차지인포 **8권역** 기준이며 환경부 17시·도와 합산하지 않습니다.",
+            "환경부 급·완속 현황 **8권역** 기준이며 환경부 17시·도와 합산하지 않습니다.",
             tone="warning",
         )
-        if not has_chargeinfo_ev_ratio:
-            st.info("차지인포 EV 1대당 보급률 데이터가 없습니다.")
+        if not has_me_charger_status_ev_ratio:
+            st.info("환경부 급·완속 현황 EV 1대당 보급률 데이터가 없습니다.")
         else:
-            q_refs = sorted(chargeinfo_ev_wide["ref_ym"].unique(), reverse=True)
+            q_refs = sorted(me_charger_status_ev_wide["ref_ym"].unique(), reverse=True)
             q_ref = st.selectbox("사분면 기준월", q_refs, index=0, key="quadrant_ref")
             qdf = _with_region_label(
-                chargeinfo_ev_wide[chargeinfo_ev_wide["ref_ym"] == q_ref]
+                me_charger_status_ev_wide[me_charger_status_ev_wide["ref_ym"] == q_ref]
             ).copy()
             med_fast = float(qdf["fast_per_ev"].median())
             med_slow = float(qdf["slow_per_ev"].median())
@@ -185,28 +185,28 @@ def render():
             "완속이 많다는 사실보다 **급속 비중(%)**과 **직전 스냅샷 대비 변화**를 봅니다. "
             "스냅샷을 바꾸면 아래 막대·증감이 함께 바뀝니다.",
         )
-        if not has_chargeinfo_monthly:
-            st.info("차지인포 월별 누적 데이터가 없습니다.")
+        if not has_me_charger_status_monthly:
+            st.info("환경부 급·완속 현황 월별 누적 데이터가 없습니다.")
         else:
-            refs = sorted(chargeinfo_ratio["ref_ym"].unique())
+            refs = sorted(me_charger_status_ratio["ref_ym"].unique())
             selected_ref = st.selectbox(
                 "비교 스냅샷",
                 list(reversed(refs)),
                 index=0,
-                key="chargeinfo_share_ref",
+                key="me_charger_status_share_ref",
             )
             prev_candidates = [r for r in refs if r < selected_ref]
             prev_ref = prev_candidates[-1] if prev_candidates else None
 
-            cur = chargeinfo_ratio[
-                (chargeinfo_ratio["ref_ym"] == selected_ref)
-                & (chargeinfo_ratio["region_name"] != "전국")
+            cur = me_charger_status_ratio[
+                (me_charger_status_ratio["ref_ym"] == selected_ref)
+                & (me_charger_status_ratio["region_name"] != "전국")
             ].copy()
             cur = _with_region_label(cur)
             if prev_ref:
-                prev = chargeinfo_ratio[
-                    (chargeinfo_ratio["ref_ym"] == prev_ref)
-                    & (chargeinfo_ratio["region_name"] != "전국")
+                prev = me_charger_status_ratio[
+                    (me_charger_status_ratio["ref_ym"] == prev_ref)
+                    & (me_charger_status_ratio["region_name"] != "전국")
                 ][["region_name", "fast_share_pct", "slow_fast_ratio"]].rename(
                     columns={
                         "fast_share_pct": "prev_fast_share",
@@ -251,19 +251,19 @@ def render():
                 else:
                     st.info("더 이른 스냅샷이 없어 변화량을 계산할 수 없습니다.")
 
-            if has_chargeinfo_ev_ratio:
+            if has_me_charger_status_ev_ratio:
                 st.markdown("#### 같은 달 EV 1대당 급속 (보급 강도)")
                 snap = _with_region_label(
-                    chargeinfo_ev_wide[chargeinfo_ev_wide["ref_ym"] == selected_ref]
+                    me_charger_status_ev_wide[me_charger_status_ev_wide["ref_ym"] == selected_ref]
                 )
                 if snap.empty:
                     nearest = max(
-                        [r for r in chargeinfo_ev_wide["ref_ym"].unique() if r <= selected_ref],
+                        [r for r in me_charger_status_ev_wide["ref_ym"].unique() if r <= selected_ref],
                         default=None,
                     )
                     if nearest:
                         snap = _with_region_label(
-                            chargeinfo_ev_wide[chargeinfo_ev_wide["ref_ym"] == nearest]
+                            me_charger_status_ev_wide[me_charger_status_ev_wide["ref_ym"] == nearest]
                         )
                         st.caption(f"보급률 표는 {nearest} 스냅샷을 사용합니다.")
                 if not snap.empty:
